@@ -52,6 +52,7 @@
     .check input { margin: 0; accent-color: var(--accent); }
     [disabled], .off { opacity: 0.5; }
     #build { color: var(--muted); font-size: 12px; margin-top: 16px; }
+    #image-selection { word-break: break-all; }
   </style>
 </head>
 <body>
@@ -90,7 +91,8 @@
 
     <section id="images" hidden>
       <h1>Images</h1>
-      <p>PLACEHOLDER. No feature yet.</p>
+      <p id="image-selection">PLACEHOLDER. Right-click an image on a page and choose
+        &ldquo;Convert to&hellip;&rdquo;.</p>
     </section>
 
     <section id="report" hidden>
@@ -153,6 +155,7 @@
   <script src="sidebar.js"></script>
   <script src="settings.js"></script>
   <script src="about.js"></script>
+  <script src="images.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

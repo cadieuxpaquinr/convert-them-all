@@ -4,10 +4,13 @@
   "version": "0.0.1",
   "description": "Convert files, videos, and images. PLACEHOLDER description.",
   "icons": {
+    "16": "icons/icon.svg",
+    "32": "icons/icon.svg",
     "48": "icons/icon.svg",
     "96": "icons/icon.svg"
   },
   "permissions": [
+    "menus",
     "storage"
   ],
   "background": {

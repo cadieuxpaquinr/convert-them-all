@@ -29,4 +29,20 @@
 
   CTASettings.mount();
   CTAAbout.mount();
+  CTAImages.mount();
+
+  // The context menu entry picks the section and the image that goes with it.
+  function apply(sel) {
+    if (!sel) return;
+    if (sel.section) show(sel.section);
+    CTAImages.set(sel.image);
+  }
+
+  browser.runtime.onMessage.addListener((msg) => {
+    if (msg && msg.type === "selection") apply(msg);
+  });
+
+  // Pulled, not pushed: the background cannot message this page until it has
+  // loaded, and a window it just opened has not.
+  browser.runtime.sendMessage({ type: "get-selection" }).then(apply).catch(() => {});
 })();

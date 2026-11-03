@@ -1,7 +1,26 @@
 const COMMAND = "primary-action";
+const MENU_ITEM = "convert-image";
 
 let appWindowId = null;
 let lastNormalWindowId = null;
+// What the app shows next. Held in memory, never in storage: a selection belongs
+// to the moment, not to the profile.
+let selection = null;
+
+// A top-level item takes its icon from the manifest; the icons option on
+// menus.create() would only apply to a submenu.
+browser.menus.create({
+  id: MENU_ITEM,
+  title: "Convert to…",
+  contexts: ["image"]
+});
+
+// The return value is ignored by Firefox; it is returned so a failure shows up as
+// a rejection in the console instead of disappearing.
+browser.menus.onClicked.addListener((info) => {
+  if (info.menuItemId !== MENU_ITEM) return undefined;
+  return showInApp({ section: "images", image: info.srcUrl || "" });
+});
 
 // Firefox ignores the windowTypes filter on windows.getAll and getLastFocused, so
 // the type is checked here. Without that, "the last focused window" is the app's
@@ -70,6 +89,23 @@ async function openApp() {
   appWindowId = win.id;
 }
 
+// Push to an app that is already up; otherwise open it and let it pull the
+// selection once loaded, which is what keeps this free of a load race.
+async function showInApp(next) {
+  selection = next;
+  if (appWindowId != null) {
+    try {
+      await browser.windows.update(appWindowId, { focused: true });
+      await browser.runtime.sendMessage(Object.assign({ type: "selection" }, next));
+      return;
+    } catch (e) {
+      // The window is gone, or its page is still loading and nothing is
+      // listening yet. openApp() raises it in the second case.
+    }
+  }
+  await openApp();
+}
+
 browser.windows.onRemoved.addListener((id) => {
   if (id === appWindowId) appWindowId = null;
   if (id === lastNormalWindowId) lastNormalWindowId = null;
@@ -100,5 +136,7 @@ browser.runtime.onMessage.addListener((msg, sender) => {
       return openApp();
     case "open-url":
       return openUrl(msg);
+    case "get-selection":
+      return Promise.resolve(selection);
   }
 });
