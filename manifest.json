@@ -1,0 +1,47 @@
+{
+  "manifest_version": 2,
+  "name": "Convert Them All",
+  "version": "0.0.1",
+  "description": "Convert files, videos, and images. PLACEHOLDER description.",
+  "icons": {
+    "48": "icons/icon.svg",
+    "96": "icons/icon.svg"
+  },
+  "permissions": [
+    "storage"
+  ],
+  "background": {
+    "scripts": ["background.js"]
+  },
+  "browser_action": {
+    "default_title": "Convert Them All",
+    "default_popup": "menu.html",
+    "default_icon": {
+      "16": "icons/icon.svg",
+      "48": "icons/icon.svg"
+    }
+  },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": false
+  },
+  "commands": {
+    "primary-action": {
+      "suggested_key": {
+        "default": "Ctrl+1",
+        "mac": "MacCtrl+1",
+        "windows": "Alt+1"
+      },
+      "description": "PLACEHOLDER primary action"
+    }
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "convert-them-all@local",
+      "strict_min_version": "140.0",
+      "data_collection_permissions": {
+        "required": ["none"]
+      }
+    }
+  }
+}

@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Convert Them All settings</title>
+  <link rel="stylesheet" href="theme.css">
+  <script src="theme.js"></script>
+  <style>
+    body { font: 14px system-ui, sans-serif; margin: 0; display: flex;
+      min-height: 100vh; }
+    nav { flex: 0 0 140px; box-sizing: border-box; padding: 12px 0;
+      background: var(--panel); border-right: 1px solid var(--line); }
+    nav button { display: block; width: 100%; box-sizing: border-box;
+      padding: 8px 16px; border: 0; background: none; font: inherit; color: inherit;
+      text-align: left; cursor: pointer; }
+    nav button:hover { background: var(--line); }
+    nav button[aria-current] { background: var(--accent); color: var(--accent-fg); }
+    main { flex: 1; padding: 16px 20px; }
+    h1 { font-size: 16px; margin: 0 0 14px; }
+    h2 { font-size: 13px; margin: 0 0 6px; text-transform: uppercase;
+      letter-spacing: 0.04em; color: var(--muted); }
+    label { display: block; margin-bottom: 6px; }
+    #shortcut { width: 100%; box-sizing: border-box; padding: 8px; font-size: 14px;
+      background: var(--field-bg); color: inherit;
+      border: 1px solid var(--field-border); border-radius: 6px; }
+    .row { margin-top: 10px; display: flex; gap: 8px; }
+    .row button { padding: 8px 12px; border: 0; border-radius: 6px; cursor: pointer;
+      font: inherit; }
+    #save { background: var(--accent); color: var(--accent-fg); }
+    #reset { background: var(--button-bg); color: inherit; }
+    #status { margin-top: 10px; min-height: 18px; color: var(--ok); }
+    #status.error { color: var(--error); }
+    p.hint { color: var(--muted); font-size: 12px; margin-top: 14px; }
+    fieldset { border: 0; margin: 0; padding: 0; }
+    fieldset label { font-weight: normal; }
+    .check { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+    .check input { margin: 0; accent-color: var(--accent); }
+    [disabled], .off { opacity: 0.5; }
+  </style>
+</head>
+<body>
+  <nav id="sections">
+    <button data-section="placeholder" aria-current="page">PLACEHOLDER</button>
+    <button data-section="appearance">Appearance</button>
+  </nav>
+
+  <main>
+    <section id="placeholder">
+      <h1>PLACEHOLDER</h1>
+      <h2>Shortcut</h2>
+      <label for="shortcut">Press the keys you want to use</label>
+      <input id="shortcut" type="text" readonly placeholder="Click here, then press keys">
+      <div class="row">
+        <button id="save">Save</button>
+        <button id="reset">Reset to default</button>
+      </div>
+      <div id="status"></div>
+      <label class="check"><input type="checkbox" id="disable-shortcut">
+        <span id="shortcut-label">Disable shortcut</span></label>
+      <p class="hint">You can also change this any time from Firefox's
+        Add-ons page &rarr; gear menu &rarr; Manage Extension Shortcuts.</p>
+    </section>
+
+    <section id="appearance" hidden>
+      <h1>Appearance</h1>
+      <fieldset>
+        <h2>Theme</h2>
+        <label><input type="radio" name="theme" value="system"> Follow system</label>
+        <label><input type="radio" name="theme" value="light"> Light</label>
+        <label><input type="radio" name="theme" value="dark"> Dark</label>
+      </fieldset>
+      <p class="hint">Applies to this window and the toolbar menu.</p>
+    </section>
+  </main>
+
+  <script src="platform.js"></script>
+  <script src="shortcut.js"></script>
+  <script src="options.js"></script>
+</body>
+</html>

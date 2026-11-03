@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="theme.css">
+  <script src="theme.js"></script>
+  <style>
+    body { font: 14px system-ui, sans-serif; margin: 0; width: 220px; }
+    button, .check { display: block; width: 100%; box-sizing: border-box;
+      padding: 10px 14px; border: 0; background: none; font: inherit; color: inherit;
+      text-align: left; cursor: pointer; }
+    button:hover, button:focus, .check:hover, .check:focus-within {
+      background: var(--accent); color: var(--accent-fg); outline: none; }
+    .check { display: flex; align-items: center; gap: 8px; }
+    .check input { margin: 0; accent-color: var(--accent); }
+    .check input:focus-visible { outline: none; }
+    hr { border: 0; border-top: 1px solid var(--line); margin: 4px 0; }
+    #build { padding: 6px 14px 8px; font-size: 11px; color: var(--muted);
+      cursor: default; }
+  </style>
+</head>
+<body>
+  <button id="primary">PLACEHOLDER action</button>
+  <label class="check">
+    <input type="checkbox" id="disable-shortcut">
+    <span id="shortcut-label">Disable shortcut</span>
+  </label>
+  <hr>
+  <button id="settings">Settings</button>
+  <hr>
+  <button id="report">⚑ Report a bug</button>
+  <button id="about">About</button>
+  <button id="follow">Follow me</button>
+  <hr>
+  <div id="build"></div>
+  <script src="shortcut.js"></script>
+  <script src="menu.js"></script>
+</body>
+</html>
