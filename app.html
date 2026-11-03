@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Convert Them All</title>
+  <link rel="stylesheet" href="theme.css">
+  <script src="theme.js"></script>
+  <style>
+    body { font: 14px system-ui, sans-serif; margin: 0; display: flex;
+      height: 100vh; overflow: hidden; }
+    nav { flex: 0 0 var(--sidebar-width, 170px); box-sizing: border-box;
+      padding: 12px 0; display: flex; flex-direction: column; overflow-y: auto;
+      background: var(--panel); }
+    nav .bottom { margin-top: auto; }
+    nav button { display: flex; align-items: center; width: 100%;
+      box-sizing: border-box; padding: 8px 16px; border: 0; background: none;
+      font: inherit; color: inherit; text-align: left; cursor: pointer; }
+    nav button:hover { background: var(--line); }
+    nav button[aria-current] { background: var(--accent); color: var(--accent-fg); }
+    nav hr { border: 0; border-top: 1px solid var(--line); margin: 4px 0; }
+    .icon { flex: 0 0 1.4em; }
+
+    #resize { flex: 0 0 5px; cursor: col-resize; background: var(--line);
+      touch-action: none; }
+
+    main { flex: 1; padding: 16px 20px; overflow-y: auto; }
+    h1 { font-size: 16px; margin: 0 0 14px; }
+    h2 { font-size: 13px; margin: 18px 0 6px; text-transform: uppercase;
+      letter-spacing: 0.04em; color: var(--muted); }
+    section > h2:first-of-type { margin-top: 0; }
+    label { display: block; margin-bottom: 6px; }
+    input[type="text"], input[type="number"] { box-sizing: border-box; padding: 8px;
+      font: inherit; background: var(--field-bg); color: inherit;
+      border: 1px solid var(--field-border); border-radius: 6px; }
+    #shortcut { width: 100%; max-width: 320px; }
+    .fields { display: flex; gap: 10px; flex-wrap: wrap; }
+    .fields label { margin: 0; color: var(--muted); font-size: 12px; }
+    .fields input { width: 90px; display: block; margin-top: 2px; color: var(--fg);
+      font-size: 14px; }
+    .row { margin-top: 10px; display: flex; gap: 8px; }
+    .row button { padding: 8px 12px; border: 0; border-radius: 6px; cursor: pointer;
+      font: inherit; background: var(--button-bg); color: inherit; }
+    .row button.primary { background: var(--accent); color: var(--accent-fg); }
+    .link { padding: 0; border: 0; background: none; font: inherit; cursor: pointer;
+      color: var(--accent); text-align: left; display: block; margin-bottom: 8px; }
+    #status { margin-top: 16px; min-height: 18px; color: var(--ok); }
+    #status.error { color: var(--error); }
+    p.hint { color: var(--muted); font-size: 12px; margin-top: 10px; }
+    fieldset { border: 0; margin: 0; padding: 0; }
+    fieldset label { font-weight: normal; }
+    .check { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+    .check input { margin: 0; accent-color: var(--accent); }
+    [disabled], .off { opacity: 0.5; }
+    #build { color: var(--muted); font-size: 12px; margin-top: 16px; }
+  </style>
+</head>
+<body>
+  <nav id="sections">
+    <div class="top">
+      <button data-section="files">Files</button>
+      <button data-section="videos">Videos</button>
+      <button data-section="images">Images</button>
+    </div>
+    <div class="bottom">
+      <hr>
+      <button data-section="report"><span class="icon">&#9873;</span>Report a bug</button>
+      <button data-section="about"><span class="icon">&#9733;</span>About</button>
+      <button data-section="settings"><span class="icon">&#9881;</span>Settings</button>
+    </div>
+  </nav>
+  <div id="resize" role="separator" aria-orientation="vertical"
+    aria-label="Resize the section list"></div>
+
+  <main>
+    <!-- Shown when the app opens, and not listed in the sidebar. -->
+    <section id="home">
+      <h1>Convert Them All</h1>
+      <p>PLACEHOLDER home page. Pick a section on the left.</p>
+    </section>
+
+    <section id="files" hidden>
+      <h1>Files</h1>
+      <p>PLACEHOLDER. No feature yet.</p>
+    </section>
+
+    <section id="videos" hidden>
+      <h1>Videos</h1>
+      <p>PLACEHOLDER. No feature yet.</p>
+    </section>
+
+    <section id="images" hidden>
+      <h1>Images</h1>
+      <p>PLACEHOLDER. No feature yet.</p>
+    </section>
+
+    <section id="report" hidden>
+      <h1>Report a bug</h1>
+      <p>PLACEHOLDER. Bugs are tracked on GitHub.</p>
+      <button class="link" id="issues">Open the issue tracker</button>
+    </section>
+
+    <section id="about" hidden>
+      <h1>About</h1>
+      <p>PLACEHOLDER description of the add-on.</p>
+      <button class="link" id="source">Source code</button>
+      <button class="link" id="follow">Follow me</button>
+      <div id="build"></div>
+    </section>
+
+    <section id="settings" hidden>
+      <h1>Settings</h1>
+
+      <h2>Shortcut</h2>
+      <label for="shortcut">Press the keys you want to use</label>
+      <input id="shortcut" type="text" readonly placeholder="Click here, then press keys">
+      <div class="row">
+        <button id="save" class="primary">Save</button>
+        <button id="reset">Reset to default</button>
+      </div>
+      <label class="check"><input type="checkbox" id="disable-shortcut">
+        <span id="shortcut-label">Disable shortcut</span></label>
+      <p class="hint">You can also change this any time from Firefox's
+        Add-ons page &rarr; gear menu &rarr; Manage Extension Shortcuts.</p>
+
+      <h2>Window</h2>
+      <div class="fields">
+        <label>X <input id="win-x" type="number" placeholder="centred"></label>
+        <label>Y <input id="win-y" type="number" placeholder="centred"></label>
+        <label>Width <input id="win-width" type="number"></label>
+        <label>Height <input id="win-height" type="number"></label>
+      </div>
+      <div class="row">
+        <button id="geometry-save" class="primary">Save</button>
+        <button id="geometry-reset">Reset to default</button>
+      </div>
+      <p class="hint">Applies the next time the app opens. Leave X and Y empty to
+        centre the window.</p>
+
+      <h2>Theme</h2>
+      <fieldset>
+        <label><input type="radio" name="theme" value="system"> Follow system</label>
+        <label><input type="radio" name="theme" value="light"> Light</label>
+        <label><input type="radio" name="theme" value="dark"> Dark</label>
+      </fieldset>
+
+      <div id="status"></div>
+    </section>
+  </main>
+
+  <script src="platform.js"></script>
+  <script src="shortcut.js"></script>
+  <script src="geometry.js"></script>
+  <script src="sidebar.js"></script>
+  <script src="settings.js"></script>
+  <script src="about.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

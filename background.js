@@ -1,55 +1,104 @@
 const COMMAND = "primary-action";
 
-let settingsWindowId = null;
+let appWindowId = null;
+let lastNormalWindowId = null;
 
-// PLACEHOLDER: the add-on has no feature yet, so both the menu row and the
-// shortcut land here.
-function primaryAction() {
-  return Promise.resolve();
+// Firefox ignores the windowTypes filter on windows.getAll and getLastFocused, so
+// the type is checked here. Without that, "the last focused window" is the app's
+// own popup whenever the app has focus, which is exactly when a link is clicked.
+// The app window is excluded by id as well, so a tab cannot land on top of the
+// app even if Firefox reports its type as normal.
+function usable(win) {
+  return !!win && win.type === "normal" && win.id !== appWindowId;
 }
 
-async function openSettings() {
-  if (settingsWindowId != null) {
+async function normalWindow() {
+  if (lastNormalWindowId != null) {
     try {
-      await browser.windows.update(settingsWindowId, { focused: true });
-      return;
+      const remembered = await browser.windows.get(lastNormalWindowId);
+      if (usable(remembered)) return remembered;
     } catch (e) {
-      settingsWindowId = null;
+      lastNormalWindowId = null;
     }
   }
-  const win = await browser.windows.create({
-    url: browser.runtime.getURL("options.html"),
-    type: "popup",
-    width: 560,
-    height: 420
-  });
-  settingsWindowId = win.id;
+  const all = await browser.windows.getAll().catch(() => []);
+  const normal = all.filter(usable);
+  return normal.find((win) => win.focused) || normal[0] || null;
+}
+
+browser.windows.onFocusChanged.addListener(async (windowId) => {
+  if (windowId === browser.windows.WINDOW_ID_NONE) return;
+  try {
+    const win = await browser.windows.get(windowId);
+    if (usable(win)) lastNormalWindowId = windowId;
+  } catch (e) {
+    // The window went away between the event and the lookup.
+  }
+});
+
+// Centre on the browser window the user came from when no position is stored.
+async function placement(geometry) {
+  const options = { width: geometry.width, height: geometry.height };
+  if ("left" in geometry && "top" in geometry) {
+    options.left = geometry.left;
+    options.top = geometry.top;
+    return options;
+  }
+  const win = await normalWindow();
+  if (!win) return options;
+  options.left = Math.max(0, Math.round(win.left + (win.width - options.width) / 2));
+  options.top = Math.max(0, Math.round(win.top + (win.height - options.height) / 2));
+  return options;
+}
+
+// One window only. A second trigger raises the one already open and leaves it on
+// whatever section the user was reading.
+async function openApp() {
+  if (appWindowId != null) {
+    try {
+      await browser.windows.update(appWindowId, { focused: true });
+      return;
+    } catch (e) {
+      appWindowId = null;
+    }
+  }
+  const geometry = await CTAGeometry.read().catch(() => CTAGeometry.normalize(null));
+  const win = await browser.windows.create(Object.assign(
+    { url: browser.runtime.getURL("app.html"), type: "popup" },
+    await placement(geometry)
+  ));
+  appWindowId = win.id;
 }
 
 browser.windows.onRemoved.addListener((id) => {
-  if (id === settingsWindowId) settingsWindowId = null;
+  if (id === appWindowId) appWindowId = null;
+  if (id === lastNormalWindowId) lastNormalWindowId = null;
 });
+
+browser.browserAction.onClicked.addListener(() => openApp());
 
 browser.commands.onCommand.addListener((name) => {
-  if (name === COMMAND) primaryAction();
+  if (name === COMMAND) openApp();
 });
 
-// Let Firefox place the tab when the message came from a popup panel, which has
-// no tab of its own.
-function openUrl(msg, sender) {
-  const windowId = sender.tab && sender.tab.windowId;
-  const options = { url: msg.url };
-  if (windowId != null) options.windowId = windowId;
-  return browser.tabs.create(options);
+// Never open the tab in the app window itself, which is a popup: a plain
+// tabs.create() with no windowId would land there. Target a normal browser
+// window and raise it, or open one when every browser window is closed.
+async function openUrl(msg) {
+  const win = await normalWindow();
+  if (!win) {
+    await browser.windows.create({ url: msg.url, type: "normal" });
+    return;
+  }
+  await browser.tabs.create({ url: msg.url, windowId: win.id, active: true });
+  await browser.windows.update(win.id, { focused: true });
 }
 
 browser.runtime.onMessage.addListener((msg, sender) => {
   switch (msg && msg.type) {
-    case "primary-action":
-      return primaryAction();
-    case "open-settings":
-      return openSettings();
+    case "open-app":
+      return openApp();
     case "open-url":
-      return openUrl(msg, sender);
+      return openUrl(msg);
   }
 });

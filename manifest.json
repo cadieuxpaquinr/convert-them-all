@@ -11,18 +11,17 @@
     "storage"
   ],
   "background": {
-    "scripts": ["background.js"]
+    "scripts": ["geometry.js", "background.js"]
   },
   "browser_action": {
     "default_title": "Convert Them All",
-    "default_popup": "menu.html",
     "default_icon": {
       "16": "icons/icon.svg",
       "48": "icons/icon.svg"
     }
   },
   "options_ui": {
-    "page": "options.html",
+    "page": "open-app.html",
     "open_in_tab": false
   },
   "commands": {
@@ -32,7 +31,7 @@
         "mac": "MacCtrl+1",
         "windows": "Alt+1"
       },
-      "description": "PLACEHOLDER primary action"
+      "description": "Open Convert Them All"
     }
   },
   "browser_specific_settings": {
