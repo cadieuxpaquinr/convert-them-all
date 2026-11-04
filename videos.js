@@ -14,6 +14,84 @@
     return url.length > MAX_URL ? `${url.slice(0, MAX_URL)}…` : url;
   }
 
+  function size(bytes) {
+    if (!bytes) return "unknown size";
+    const mb = bytes / (1024 * 1024);
+    return mb >= 1 ? `${mb.toFixed(1)} MB` : `${Math.round(bytes / 1024)} kB`;
+  }
+
+  function setStatus(message, isError) {
+    el.status.textContent = message;
+    el.status.classList.toggle("error", !!isError);
+  }
+
+  function showDetails(raw) {
+    el.raw.textContent = raw || "";
+    el.details.hidden = !raw;
+  }
+
+  function busy(on) {
+    el.url.disabled = on;
+    el.download.disabled = on;
+    el.detect.disabled = on;
+    el.cancel.hidden = !on;
+    el.progress.hidden = !on;
+  }
+
+  async function download() {
+    const url = el.url.value.trim();
+    if (!url) {
+      setStatus("Paste a link first, or detect one on the page.", true);
+      return;
+    }
+    showDetails("");
+    setStatus("");
+    busy(true);
+    el.progress.textContent = "Starting…";
+
+    const directory = await CTAFolder.read().catch(() => "");
+    const result = await CTANative.job(
+      { type: "download", url, directory },
+      (step) => {
+        el.progress.textContent =
+          `${step.percent || ""} at ${step.speed || "?"}, ${step.eta || "?"} left`;
+      }
+    );
+
+    busy(false);
+    if (result && result.type === "done") {
+      setStatus(`Saved ${result.name}, ${size(result.bytes)}.`);
+      return;
+    }
+    if (result && result.reason === "cancelled") {
+      setStatus("Stopped.");
+      return;
+    }
+    await CTAPlatform.ready.catch(() => {});
+    const why = CTAFailure.explain(result, CTAPlatform.os());
+    setStatus(`${why.title}. ${why.detail}`
+      + (why.command ? ` Try: ${why.command}` : ""), true);
+    showDetails(why.raw);
+  }
+
+  // The app window is a popup, so it is never the active tab itself. The
+  // background holds the last normal window and reads the address from there.
+  async function detect() {
+    showDetails("");
+    let answer = null;
+    try {
+      answer = await browser.runtime.sendMessage({ type: "active-url" });
+    } catch (e) {
+      answer = null;
+    }
+    if (!answer || !answer.url) {
+      setStatus("No page to read. Open one in a normal window first.", true);
+      return;
+    }
+    el.url.value = answer.url;
+    setStatus(answer.title ? `Found: ${answer.title}` : "Found the page address.");
+  }
+
   // What the machine can do, and what to do about it when it cannot. The whole
   // video side is gated on this; images never ask.
   function paintHelper(state) {
@@ -53,6 +131,14 @@
     el.helperSteps = document.getElementById("helper-steps");
     el.helperActions = document.getElementById("helper-actions");
     el.selection = document.getElementById("video-selection");
+    el.url = document.getElementById("video-url");
+    el.detect = document.getElementById("video-detect");
+    el.download = document.getElementById("video-download");
+    el.cancel = document.getElementById("video-cancel");
+    el.status = document.getElementById("video-status");
+    el.progress = document.getElementById("video-progress");
+    el.details = document.getElementById("video-details");
+    el.raw = document.getElementById("video-raw");
     el.preview = document.getElementById("video-preview");
     el.missing = document.getElementById("video-missing");
 
@@ -80,6 +166,12 @@
 
     document.getElementById("helper-recheck")
       .addEventListener("click", () => refresh().catch(() => {}));
+    el.download.addEventListener("click", () => download().catch(() => {}));
+    el.detect.addEventListener("click", () => detect().catch(() => {}));
+    el.cancel.addEventListener("click", () => CTANative.stop());
+    el.url.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") download().catch(() => {});
+    });
 
     reset();
     refresh().catch(() => {});
@@ -104,12 +196,19 @@
   // Anything else is judged by whether it loads, not by how it looks. A blob:
   // address can be perfectly good, from a picked file, or useless, from another
   // page, and only trying tells the two apart.
-  function set(url) {
+  function set(url, page) {
     if (!el.selection) return;
+    if (page || url) {
+      el.url.value = page || url;
+      setStatus("");
+      showDetails("");
+    }
     if (!url) {
-      el.selection.textContent =
-        "That video has no address of its own. The site streams it in pieces, so there "
-        + "is nothing here to show or to save.";
+      el.selection.textContent = page
+        ? "That video is streamed in pieces, so there is no frame to show. The page "
+          + "address is in the box above, and yt-dlp can read the video from it."
+        : "That video has no address of its own. The site streams it in pieces, so "
+          + "there is nothing here to show or to save.";
       el.missing.hidden = true;
       clearPreview();
       return;

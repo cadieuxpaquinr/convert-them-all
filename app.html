@@ -96,6 +96,12 @@
       border-radius: 6px; }
     #format option { padding: 3px 6px; }
     #image-name { width: 100%; max-width: 220px; }
+    #video-url { width: 100%; max-width: 520px; }
+    #download-folder { width: 100%; max-width: 420px; }
+    #video-details { margin-top: 10px; color: var(--muted); font-size: 12px; }
+    #video-raw { max-height: 160px; overflow: auto; padding: 8px; margin: 6px 0 0;
+      background: var(--field-bg); border: 1px solid var(--line); border-radius: 6px;
+      font: 11px ui-monospace, monospace; white-space: pre-wrap; word-break: break-all; }
   </style>
 </head>
 <body>
@@ -181,6 +187,21 @@
       <p id="video-selection" class="media-selection">Right-click a video on a page and
         choose &ldquo;Convert to&hellip;&rdquo;.</p>
 
+      <h2>Video link</h2>
+      <input id="video-url" type="text" spellcheck="false"
+        placeholder="https://&hellip;">
+      <div class="row">
+        <button id="video-detect">Detect on this page</button>
+        <button id="video-download" class="primary">Download</button>
+        <button id="video-cancel" hidden>Cancel</button>
+      </div>
+      <div id="video-status" class="status"></div>
+      <p id="video-progress" class="hint" hidden></p>
+      <details id="video-details" hidden>
+        <summary>Details</summary>
+        <pre id="video-raw"></pre>
+      </details>
+
       <h2>Preview</h2>
       <div class="preview-box">
         <video id="video-preview" preload="metadata" muted></video>
@@ -251,6 +272,15 @@
       <p class="hint">Applies the next time the app opens. Leave X and Y empty to
         centre the window.</p>
 
+      <h2>Downloads</h2>
+      <label for="download-folder">Where videos are saved</label>
+      <input id="download-folder" type="text" spellcheck="false"
+        placeholder="the usual Downloads folder">
+      <div class="row">
+        <button id="folder-save" class="primary">Save</button>
+        <button id="folder-default">Use the default</button>
+      </div>
+
       <h2>Conversions</h2>
       <label class="check"><input type="checkbox" id="all-sites">
         <span>Allow conversions on all sites</span></label>
@@ -297,6 +327,8 @@
   <script src="convert.js"></script>
   <script src="native.js"></script>
   <script src="readiness.js"></script>
+  <script src="failures.js"></script>
+  <script src="folder.js"></script>
   <script src="images.js"></script>
   <script src="videos.js"></script>
   <script src="app.js"></script>

@@ -182,6 +182,45 @@
       });
     }
 
+    const folderField = document.getElementById("download-folder");
+
+    // The helper checks the folder, not the add-on: it is the one that has to
+    // write there, and it refuses anything outside the user's home.
+    document.getElementById("folder-save").addEventListener("click", async () => {
+      const path = folderField.value.trim();
+      if (!path) {
+        await CTAFolder.clear();
+        setStatus("Using the usual Downloads folder.");
+        return;
+      }
+      const answer = await CTANative.ask({ type: "check-folder", path });
+      if (!answer || answer.type !== "folder") {
+        setStatus("The helper did not answer, so the folder was not checked.", true);
+        return;
+      }
+      if (!answer.exists) {
+        setStatus(`${answer.path} does not exist.`, true);
+        return;
+      }
+      if (!answer.writable) {
+        setStatus(`${answer.path} cannot be written to.`, true);
+        return;
+      }
+      await CTAFolder.save(answer.path);
+      folderField.value = answer.path;
+      setStatus("Downloads will be saved there.");
+    });
+
+    document.getElementById("folder-default").addEventListener("click", async () => {
+      await CTAFolder.clear();
+      folderField.value = "";
+      setStatus("Using the usual Downloads folder.");
+    });
+
+    async function loadFolder() {
+      folderField.value = await CTAFolder.read();
+    }
+
     const allSites = document.getElementById("all-sites");
     const dialog = document.getElementById("sites-dialog");
     const sitesCount = document.getElementById("sites-count");
@@ -280,6 +319,7 @@
     loadGeometry().catch(() => {});
     loadTheme().catch(() => {});
     loadAccess().catch(() => {});
+    loadFolder().catch(() => {});
   }
 
   window.CTASettings = { mount };
