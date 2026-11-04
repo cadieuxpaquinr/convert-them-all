@@ -1,9 +1,55 @@
-<!-- PLACEHOLDER icon -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48">
-  <rect width="48" height="48" rx="8" fill="#1b1b2f"/>
-  <g fill="none" stroke="#4cc9f0" stroke-width="4" stroke-linecap="round"
-     stroke-linejoin="round">
-    <path d="M10 18h22l-7-7"/>
-    <path d="M38 30H16l7 7"/>
+  <defs>
+    <linearGradient id="ribbon" x1="4" y1="10" x2="44" y2="38"
+      gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#d9f99d"/>
+      <stop offset="0.25" stop-color="#4ade80"/>
+      <stop offset="0.55" stop-color="#2dd4bf"/>
+      <stop offset="0.8" stop-color="#38bdf8"/>
+      <stop offset="1" stop-color="#1d4ed8"/>
+    </linearGradient>
+    <radialGradient id="halo" cx="21" cy="22" r="20" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#5eead4" stop-opacity="0.45"/>
+      <stop offset="0.5" stop-color="#22d3ee" stop-opacity="0.14"/>
+      <stop offset="1" stop-color="#1e3a8a" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="soft" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="2.2"/>
+    </filter>
+    <filter id="sharp" x="-60%" y="-60%" width="220%" height="220%">
+      <feGaussianBlur stdDeviation="0.6" result="b"/>
+      <feMerge>
+        <feMergeNode in="b"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <rect width="48" height="48" rx="9" fill="#05070c"/>
+  <ellipse cx="21" cy="22" rx="21" ry="17" fill="url(#halo)"/>
+
+  <!-- Long trails that cross near the core and run off the frame, drawn twice:
+       blurred underneath for the glow, crisp on top. -->
+  <g fill="none" stroke="url(#ribbon)" stroke-linecap="round">
+    <g filter="url(#soft)" opacity="0.8">
+      <path d="M-3 37C6 12 22 3 32 9c8 5 6 16-5 19C13 31 4 24 7 17" stroke-width="3.2"/>
+      <path d="M2 16c10 17 29 23 41 12" stroke-width="2.8"/>
+      <path d="M9 45c13-5 28-18 42-38" stroke-width="2"/>
+    </g>
+    <g filter="url(#sharp)">
+      <path d="M-3 37C6 12 22 3 32 9c8 5 6 16-5 19C13 31 4 24 7 17" stroke-width="2.2"/>
+      <path d="M2 16c10 17 29 23 41 12" stroke-width="1.9"/>
+      <path d="M9 45c13-5 28-18 42-38" stroke-width="1.3" opacity="0.9"/>
+      <path d="M5 26c12 5 27 1 35-10" stroke-width="0.9" opacity="0.65"/>
+      <path d="M24 46c3-7 2-15-3-21" stroke-width="0.9" opacity="0.5"/>
+    </g>
+  </g>
+
+  <g filter="url(#sharp)">
+    <circle cx="20" cy="20" r="7" fill="#99f6e4" opacity="0.2"/>
+    <circle cx="20" cy="20" r="3.4" fill="#f0fdfa"/>
+    <circle cx="37" cy="31" r="1.9" fill="#60a5fa" opacity="0.9"/>
+    <circle cx="10" cy="13" r="1.4" fill="#bef264" opacity="0.8"/>
+    <circle cx="30" cy="40" r="1.1" fill="#38bdf8" opacity="0.6"/>
   </g>
 </svg>
