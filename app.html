@@ -134,8 +134,8 @@
             <button id="download">Download</button>
           </div>
           <div id="image-status" class="status"></div>
-          <p class="hint">No converter yet: Download saves the original file, with its
-            own extension.</p>
+          <p class="hint">Download saves the converted image, or the original one when
+            you have not converted it yet. Everything happens on your computer.</p>
         </div>
       </div>
     </section>
@@ -183,6 +183,14 @@
       <p class="hint">Applies the next time the app opens. Leave X and Y empty to
         centre the window.</p>
 
+      <h2>Conversions</h2>
+      <label class="check"><input type="checkbox" id="all-sites">
+        <span>Allow conversions on all sites</span></label>
+      <p class="hint">Off, the add-on asks for one site at a time, the first time you
+        convert an image from it. On, it asks once and never again. Turning this off
+        again leaves the single sites you already allowed; those are managed from the
+        Add-ons page.</p>
+
       <h2>Theme</h2>
       <fieldset>
         <label><input type="radio" name="theme" value="system"> Follow system</label>
@@ -200,6 +208,8 @@
   <script src="sidebar.js"></script>
   <script src="settings.js"></script>
   <script src="about.js"></script>
+  <script src="access.js"></script>
+  <script src="ico.js"></script>
   <script src="convert.js"></script>
   <script src="images.js"></script>
   <script src="app.js"></script>

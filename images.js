@@ -1,9 +1,9 @@
 /*
  * The Images pane: the image the "Convert to…" entry handed over, the format
- * and name to give it, and the download. Mounted by app.js.
+ * and name to give it, the conversion, and the download.
  *
- * The conversion itself lives in convert.js and is a pass-through for now, so
- * Convert leaves the preview on the original and Download saves the source file.
+ * The encoding itself lives in convert.js. Formats with no offline encoder are
+ * listed but cannot be picked.
  */
 (() => {
   const MAX_URL = 120;
@@ -17,6 +17,10 @@
   // A data: URL runs to megabytes, so only its head is shown.
   function short(url) {
     return url.length > MAX_URL ? `${url.slice(0, MAX_URL)}…` : url;
+  }
+
+  function size(bytes) {
+    return bytes < 1024 ? `${bytes} B` : `${Math.round(bytes / 1024)} kB`;
   }
 
   function setStatus(message, isError) {
@@ -42,37 +46,82 @@
     el.missing.hidden = true;
   }
 
-  async function convert() {
-    const format = CTAConvert.format(el.format.value);
-    try {
-      result = await CTAConvert.run({ url: source, format: el.format.value });
-    } catch (e) {
-      setStatus("Could not convert that image.", true);
-      return;
-    }
-    showPreview(result.url);
-    el.state.textContent = result.converted
-      ? `Converted to ${format.label}`
-      : `Converted to ${format.label} (placeholder: the image is unchanged)`;
-    setStatus("");
+  // The converted image is a blob held by this page until it is let go.
+  function replaceResult(next) {
+    if (result && result.converted) URL.revokeObjectURL(result.url);
+    result = next;
   }
 
-  // Downloading before converting saves the source, which is also what a
-  // conversion gives back today.
-  async function download() {
-    let target = result;
-    try {
-      if (!target) target = await CTAConvert.run({ url: source, format: el.format.value });
-    } catch (e) {
-      setStatus("Could not convert that image.", true);
+  async function convert() {
+    const format = CTAConvert.format(el.format.value);
+    if (!CTAConvert.available(format)) {
+      setStatus(`${format ? format.label : "That format"} is not available yet.`, true);
       return;
     }
+    // Checked before anything is asked for or fetched: the image is already
+    // what was asked for, so there is nothing to do.
+    if (CTAConvert.sameFormat(source, format.id)) {
+      replaceResult(null);
+      showPreview(source);
+      el.state.textContent = `Already ${format.label}, ready for download`;
+      setStatus("");
+      return;
+    }
+
+    // Nothing may be awaited before this: Firefox only grants a permission
+    // request that is still inside the click that asked for it.
+    let granted = false;
+    try {
+      granted = await CTAAccess.request(source);
+    } catch (e) {
+      granted = false;
+    }
+    if (!granted) {
+      setStatus("Firefox needs permission to read that image.", true);
+      return;
+    }
+
+    setStatus("Converting…");
+    el.convert.disabled = true;
+    try {
+      const next = await CTAConvert.run({ url: source, format: format.id });
+      replaceResult(next);
+      showPreview(next.url);
+      el.state.textContent =
+        `Converted to ${format.label} · ${next.width}×${next.height} · ${size(next.size)}`;
+      setStatus("");
+    } catch (e) {
+      setStatus(`Could not convert: ${e.message}`, true);
+    } finally {
+      el.convert.disabled = !source;
+    }
+  }
+
+  // Before a conversion this saves the original, which is why it carries the
+  // source extension rather than the one picked in the list.
+  async function download() {
+    const target = result || {
+      url: source,
+      ext: CTAConvert.extensionFrom(source) || "img"
+    };
     const filename = CTAConvert.fileName(el.name.value, target.ext);
     try {
       await browser.downloads.download({ url: target.url, filename, saveAs: false });
       setStatus(`Saved as ${filename}.`);
     } catch (e) {
       setStatus("Could not save that image.", true);
+    }
+  }
+
+  function fillFormats() {
+    for (const format of CTAConvert.FORMATS) {
+      const option = document.createElement("option");
+      option.value = format.id;
+      option.textContent = CTAConvert.available(format)
+        ? format.label
+        : `${format.label} - COMING SOON`;
+      option.disabled = !CTAConvert.available(format);
+      el.format.appendChild(option);
     }
   }
 
@@ -89,12 +138,7 @@
 
     placeholder = el.selection.textContent;
 
-    for (const format of CTAConvert.FORMATS) {
-      const option = document.createElement("option");
-      option.value = format.id;
-      option.textContent = format.label;
-      el.format.appendChild(option);
-    }
+    fillFormats();
     el.format.value = CTAConvert.FORMATS[0].id;
 
     el.convert.addEventListener("click", convert);
@@ -111,7 +155,7 @@
   function set(url) {
     if (!el.selection) return;
     source = url || "";
-    result = null;
+    replaceResult(null);
     el.selection.textContent = source ? `Selected: ${short(source)}` : placeholder;
     el.state.textContent = "Original";
     setStatus("");
@@ -122,8 +166,9 @@
       return;
     }
     el.name.value = CTAConvert.nameFrom(source);
+    // A source in a format that cannot be written yet falls back to the first.
     const guess = CTAConvert.formatFrom(source);
-    el.format.value = guess ? guess.id : CTAConvert.FORMATS[0].id;
+    el.format.value = CTAConvert.available(guess) ? guess.id : CTAConvert.FORMATS[0].id;
     showPreview(source);
   }
 

@@ -157,6 +157,33 @@
       });
     }
 
+    const allSites = document.getElementById("all-sites");
+
+    // Read back from Firefox, never from the click, so a refused prompt leaves
+    // the box showing what is really granted.
+    async function loadAccess() {
+      allSites.checked = await CTAAccess.hasAll();
+    }
+
+    allSites.addEventListener("change", async () => {
+      try {
+        if (allSites.checked) {
+          const granted = await CTAAccess.requestAll();
+          setStatus(granted ? "Conversions allowed on all sites."
+            : "Permission refused.", !granted);
+        } else {
+          await CTAAccess.revokeAll();
+          setStatus("Conversions ask for one site at a time again.");
+        }
+      } catch (e) {
+        setStatus("Could not change the site permission.", true);
+      }
+      await loadAccess();
+    });
+
+    // The Add-ons page and any other app window can change this too.
+    CTAAccess.onChange(() => loadAccess().catch(() => {}));
+
     async function loadTheme() {
       const value = await CTATheme.current();
       const radio = document.querySelector(`input[name="theme"][value="${value}"]`);
@@ -176,6 +203,7 @@
 
     loadGeometry().catch(() => {});
     loadTheme().catch(() => {});
+    loadAccess().catch(() => {});
   }
 
   window.CTASettings = { mount };
