@@ -43,8 +43,8 @@
     .row button.primary { background: var(--accent); color: var(--accent-fg); }
     .link { padding: 0; border: 0; background: none; font: inherit; cursor: pointer;
       color: var(--accent); text-align: left; display: block; margin-bottom: 8px; }
-    #status { margin-top: 16px; min-height: 18px; color: var(--ok); }
-    #status.error { color: var(--error); }
+    .status { margin-top: 16px; min-height: 18px; color: var(--ok); }
+    .status.error { color: var(--error); }
     p.hint { color: var(--muted); font-size: 12px; margin-top: 10px; }
     fieldset { border: 0; margin: 0; padding: 0; }
     fieldset label { font-weight: normal; }
@@ -53,6 +53,24 @@
     [disabled], .off { opacity: 0.5; }
     #build { color: var(--muted); font-size: 12px; margin-top: 16px; }
     #image-selection { word-break: break-all; }
+    .columns { display: flex; gap: 24px; flex-wrap: wrap; margin-top: 18px; }
+    /* Without a basis the hint's max-content width pushes the second column
+       onto its own row. */
+    .columns > div { flex: 0 1 260px; min-width: 0; }
+    .columns h2 { margin-top: 0; }
+    .columns > div + div h2 { margin-top: 14px; }
+    .columns > div + div > h2:first-child { margin-top: 0; }
+    #preview-box { width: 260px; height: 200px; box-sizing: border-box;
+      display: flex; align-items: center; justify-content: center; overflow: hidden;
+      background: var(--panel); border: 1px solid var(--line); border-radius: 6px; }
+    #image-preview { max-width: 100%; max-height: 100%; }
+    #preview-missing { color: var(--muted); font-size: 12px; }
+    #preview-state { margin-top: 8px; }
+    #format { min-width: 150px; padding: 4px; font: inherit; color: inherit;
+      background: var(--field-bg); border: 1px solid var(--field-border);
+      border-radius: 6px; }
+    #format option { padding: 3px 6px; }
+    #image-name { width: 100%; max-width: 220px; }
   </style>
 </head>
 <body>
@@ -93,6 +111,33 @@
       <h1>Images</h1>
       <p id="image-selection">PLACEHOLDER. Right-click an image on a page and choose
         &ldquo;Convert to&hellip;&rdquo;.</p>
+
+      <div class="columns">
+        <div>
+          <h2>Preview</h2>
+          <div id="preview-box">
+            <img id="image-preview" alt="">
+            <span id="preview-missing" hidden>Preview unavailable</span>
+          </div>
+          <p id="preview-state" class="hint">Original</p>
+        </div>
+
+        <div>
+          <h2>Convert to</h2>
+          <select id="format" size="6"></select>
+
+          <h2>Name</h2>
+          <input id="image-name" type="text" placeholder="image">
+
+          <div class="row">
+            <button id="convert" class="primary">Convert</button>
+            <button id="download">Download</button>
+          </div>
+          <div id="image-status" class="status"></div>
+          <p class="hint">No converter yet: Download saves the original file, with its
+            own extension.</p>
+        </div>
+      </div>
     </section>
 
     <section id="report" hidden>
@@ -145,7 +190,7 @@
         <label><input type="radio" name="theme" value="dark"> Dark</label>
       </fieldset>
 
-      <div id="status"></div>
+      <div id="status" class="status"></div>
     </section>
   </main>
 
@@ -155,6 +200,7 @@
   <script src="sidebar.js"></script>
   <script src="settings.js"></script>
   <script src="about.js"></script>
+  <script src="convert.js"></script>
   <script src="images.js"></script>
   <script src="app.js"></script>
 </body>
