@@ -14,7 +14,42 @@
     return url.length > MAX_URL ? `${url.slice(0, MAX_URL)}…` : url;
   }
 
+  // What the machine can do, and what to do about it when it cannot. The whole
+  // video side is gated on this; images never ask.
+  function paintHelper(state) {
+    el.helper.className = `notice ${state.ready ? "ready" : state.blocking ? "blocked" : "warn"}`;
+    el.helperTitle.textContent = state.title;
+    el.helperDetail.textContent = state.detail;
+    el.helperDetail.hidden = state.ready;
+    el.helperSteps.textContent = "";
+    for (const step of state.steps) {
+      const item = document.createElement("li");
+      item.textContent = step.text;
+      if (step.command) {
+        const command = document.createElement("code");
+        command.textContent = step.command;
+        item.appendChild(command);
+      }
+      el.helperSteps.appendChild(item);
+    }
+    el.helperActions.hidden = state.ready;
+  }
+
+  async function refresh() {
+    el.helperTitle.textContent = "Checking what this computer can do…";
+    el.helperDetail.textContent = "";
+    el.helperSteps.textContent = "";
+    const report = await CTANative.ping();
+    await CTAPlatform.ready.catch(() => {});
+    paintHelper(CTAReady.check(report, CTAPlatform.os()));
+  }
+
   function mount() {
+    el.helper = document.getElementById("video-helper");
+    el.helperTitle = document.getElementById("helper-title");
+    el.helperDetail = document.getElementById("helper-detail");
+    el.helperSteps = document.getElementById("helper-steps");
+    el.helperActions = document.getElementById("helper-actions");
     el.selection = document.getElementById("video-selection");
     el.preview = document.getElementById("video-preview");
     el.missing = document.getElementById("video-missing");
@@ -41,7 +76,11 @@
       }
     });
 
+    document.getElementById("helper-recheck")
+      .addEventListener("click", () => refresh().catch(() => {}));
+
     reset();
+    refresh().catch(() => {});
   }
 
   function clearPreview() {
@@ -79,5 +118,5 @@
     el.preview.src = url;
   }
 
-  window.CTAVideos = { mount, set };
+  window.CTAVideos = { mount, set, refresh };
 })();

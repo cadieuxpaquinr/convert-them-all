@@ -77,6 +77,18 @@
       background: var(--panel); border: 1px solid var(--line); border-radius: 6px; }
     .preview-box > img, .preview-box > video { max-width: 100%; max-height: 100%; }
     .preview-missing { color: var(--muted); font-size: 12px; }
+    .notice { margin: 0 0 14px; padding: 10px 12px; border-radius: 6px;
+      border-left: 3px solid var(--line); background: var(--panel); }
+    .notice.blocked { border-left-color: var(--error); }
+    .notice.warn { border-left-color: var(--accent); }
+    .notice.ready { background: none; padding: 0; border-left: 0;
+      color: var(--muted); font-size: 12px; }
+    .notice p { margin: 0 0 6px; }
+    .notice ol { margin: 8px 0 0; padding-left: 20px; }
+    .notice li { margin-bottom: 6px; }
+    .notice code { display: block; margin-top: 3px; padding: 5px 7px; border-radius: 4px;
+      background: var(--field-bg); border: 1px solid var(--line);
+      font: 12px ui-monospace, monospace; user-select: all; word-break: break-all; }
     #preview-state { margin-top: 8px; }
     #format { min-width: 150px; padding: 4px; font: inherit; color: inherit;
       background: var(--field-bg); border: 1px solid var(--field-border);
@@ -156,6 +168,15 @@
 
     <section id="videos" hidden>
       <h1>Videos</h1>
+
+      <div id="video-helper" class="notice">
+        <p id="helper-title">Checking what this computer can do&hellip;</p>
+        <p id="helper-detail" class="hint"></p>
+        <ol id="helper-steps"></ol>
+        <div class="row" id="helper-actions" hidden>
+          <button id="helper-recheck">Check again</button>
+        </div>
+      </div>
       <p id="video-selection" class="media-selection">Right-click a video on a page and
         choose &ldquo;Convert to&hellip;&rdquo;.</p>
 
@@ -273,6 +294,8 @@
   <script src="access.js"></script>
   <script src="ico.js"></script>
   <script src="convert.js"></script>
+  <script src="native.js"></script>
+  <script src="readiness.js"></script>
   <script src="images.js"></script>
   <script src="videos.js"></script>
   <script src="app.js"></script>

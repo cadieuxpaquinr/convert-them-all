@@ -12,6 +12,7 @@
   "permissions": [
     "downloads",
     "menus",
+    "nativeMessaging",
     "storage"
   ],
   "optional_permissions": [
