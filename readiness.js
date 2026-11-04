@@ -12,11 +12,12 @@
 (() => {
   // Raise this when the add-on starts needing something an older helper cannot
   // do. An out-of-date helper is then told to update instead of misbehaving.
-  const NEEDS_HOST = 1;
+  const NEEDS_HOST = 2;
 
-  // A year. yt-dlp follows sites that change constantly, and an old copy fails
-  // in ways that look like bugs in this add-on.
-  const STALE_DAYS = 365;
+  // yt-dlp warns about itself past 90 days, and it is right to: a copy from
+  // March failed on YouTube with a bare 403 that a current one downloaded
+  // without complaint. Matching its own threshold is the honest number.
+  const STALE_DAYS = 90;
 
   const COMMANDS = {
     linux: {
@@ -24,6 +25,7 @@
       ffmpeg: "sudo apt install ffmpeg",
       python: "sudo apt install python3",
       update: "sudo apt install --only-upgrade yt-dlp",
+      jsruntime: "sudo apt install nodejs",
       note: "On Debian and Ubuntu. Other distributions use their own package manager.",
       helper: "./host/install.sh"
     },
@@ -32,6 +34,7 @@
       ffmpeg: "winget install Gyan.FFmpeg",
       python: "winget install Python.Python.3.12",
       update: "winget upgrade yt-dlp.yt-dlp",
+      jsruntime: "winget install OpenJS.NodeJS",
       note: "In PowerShell or Terminal.",
       helper: "powershell -ExecutionPolicy Bypass -File host\\install.ps1"
     },
@@ -40,6 +43,7 @@
       ffmpeg: "brew install ffmpeg",
       python: "brew install python",
       update: "brew upgrade yt-dlp",
+      jsruntime: "brew install node",
       note: "With Homebrew.",
       helper: "./host/install.sh"
     }
@@ -122,6 +126,16 @@
         [{ text: "Update it:", command: how.update }]);
     }
 
+    const runtime = report.jsruntime || {};
+    if (!runtime.found) {
+      return state("no-jsruntime", false,
+        "Sites that scramble their links will fail",
+        "YouTube and others hide their addresses behind JavaScript, and yt-dlp needs "
+        + "a runtime to work them out. Node, Deno or Bun will do. Other sites are "
+        + "unaffected.",
+        [{ text: "Install one:", command: how.jsruntime }, { text: how.note }]);
+    }
+
     const folder = report.downloads || {};
     if (!folder.exists) {
       return state("no-folder", true,
@@ -138,9 +152,10 @@
 
     return state("ready", false,
       "Ready",
-      `yt-dlp ${ytdlp.version} and ffmpeg ${ffmpeg.version}, saving to ${folder.path}.`,
+      `yt-dlp ${ytdlp.version}, ffmpeg ${ffmpeg.version}, ${runtime.name}. `
+      + `Saving to ${folder.path}.`,
       []);
   }
 
-  window.CTAReady = { NEEDS_HOST, STALE_DAYS, check };
+  window.CTAReady = { NEEDS_HOST, STALE_DAYS, commands, check };
 })();
