@@ -64,7 +64,7 @@
     .check input { margin: 0; accent-color: var(--accent); }
     [disabled], .off { opacity: 0.5; }
     #build { color: var(--muted); font-size: 12px; margin-top: 16px; }
-    #image-selection { word-break: break-all; }
+    .media-selection { word-break: break-all; }
     .columns { display: flex; gap: 24px; flex-wrap: wrap; margin-top: 18px; }
     /* Without a basis the hint's max-content width pushes the second column
        onto its own row. */
@@ -72,11 +72,11 @@
     .columns h2 { margin-top: 0; }
     .columns > div + div h2 { margin-top: 14px; }
     .columns > div + div > h2:first-child { margin-top: 0; }
-    #preview-box { width: 260px; height: 200px; box-sizing: border-box;
+    .preview-box { width: 260px; height: 200px; box-sizing: border-box;
       display: flex; align-items: center; justify-content: center; overflow: hidden;
       background: var(--panel); border: 1px solid var(--line); border-radius: 6px; }
-    #image-preview { max-width: 100%; max-height: 100%; }
-    #preview-missing { color: var(--muted); font-size: 12px; }
+    .preview-box > img, .preview-box > video { max-width: 100%; max-height: 100%; }
+    .preview-missing { color: var(--muted); font-size: 12px; }
     #preview-state { margin-top: 8px; }
     #format { min-width: 150px; padding: 4px; font: inherit; color: inherit;
       background: var(--field-bg); border: 1px solid var(--field-border);
@@ -108,13 +108,13 @@
     <!-- Shown when the app opens, and not listed in the sidebar. -->
     <section id="home">
       <h1>Convert Them All</h1>
-      <p>PLACEHOLDER home page. Pick a section on the left.</p>
+      <p>Pick a section on the left.</p>
     </section>
 
     <section id="images" hidden>
       <h1>Images</h1>
-      <p id="image-selection">PLACEHOLDER. Right-click an image on a page and choose
-        &ldquo;Convert to&hellip;&rdquo;, or open one from your computer.</p>
+      <p id="image-selection" class="media-selection">Right-click an image on a page and
+        choose &ldquo;Convert to&hellip;&rdquo;, or open one from your computer.</p>
       <div class="row">
         <button id="pick-file">Choose an image&hellip;</button>
         <input type="file" id="image-file" accept="image/*" hidden>
@@ -123,9 +123,9 @@
       <div class="columns">
         <div>
           <h2>Preview</h2>
-          <div id="preview-box">
+          <div class="preview-box">
             <img id="image-preview" alt="">
-            <span id="preview-missing" hidden>Preview unavailable</span>
+            <span id="preview-missing" class="preview-missing" hidden>Preview unavailable</span>
           </div>
           <p id="preview-state" class="hint">Original</p>
         </div>
@@ -156,7 +156,17 @@
 
     <section id="videos" hidden>
       <h1>Videos</h1>
-      <p>PLACEHOLDER. No feature yet.</p>
+      <p id="video-selection" class="media-selection">Right-click a video on a page and
+        choose &ldquo;Convert to&hellip;&rdquo;.</p>
+
+      <h2>Preview</h2>
+      <div class="preview-box">
+        <video id="video-preview" preload="metadata" muted></video>
+        <span id="video-missing" class="preview-missing" hidden>Preview unavailable</span>
+      </div>
+      <p class="hint">A single frame, not a player. No converter yet. A video that a site
+        streams in pieces, as YouTube does, has no address that works outside its own
+        page, so it cannot be shown here.</p>
     </section>
 
     <section id="audio" hidden>
@@ -176,13 +186,14 @@
 
     <section id="report" hidden>
       <h1>Report a bug</h1>
-      <p>PLACEHOLDER. Bugs are tracked on GitHub.</p>
+      <p>Bugs are tracked on GitHub.</p>
       <button class="link" id="issues">Open the issue tracker</button>
     </section>
 
     <section id="about" hidden>
       <h1>About</h1>
-      <p>PLACEHOLDER description of the add-on.</p>
+      <p>Converts images, in your browser and on your computer only.
+        Nothing is uploaded anywhere.</p>
       <button class="link" id="source">Source code</button>
       <button class="link" id="follow">Follow me</button>
       <div id="build"></div>
@@ -263,6 +274,7 @@
   <script src="ico.js"></script>
   <script src="convert.js"></script>
   <script src="images.js"></script>
+  <script src="videos.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

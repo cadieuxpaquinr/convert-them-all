@@ -27,9 +27,16 @@
   // A failed read just means the default width, which is what the CSS already shows.
   CTASidebar.load().catch(() => {});
 
-  CTASettings.mount();
-  CTAAbout.mount();
-  CTAImages.mount();
+  // One pane that fails to mount must not take the others, nor the handover
+  // below, down with it: that would leave the app sitting on its home page with
+  // no sign of why.
+  for (const pane of [CTASettings, CTAAbout, CTAImages, CTAVideos]) {
+    try {
+      pane.mount();
+    } catch (e) {
+      console.error("Convert Them All: a section failed to load.", e);
+    }
+  }
 
   // The background says which section to show, and gives an image only when one
   // comes with it: opening the app from the toolbar or the shortcut asks for the
@@ -38,6 +45,7 @@
     if (!view) return;
     if (view.section) show(view.section);
     if ("image" in view) CTAImages.set(view.image);
+    if ("video" in view) CTAVideos.set(view.video);
   }
 
   browser.runtime.onMessage.addListener((msg) => {

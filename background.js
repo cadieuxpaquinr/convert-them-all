@@ -12,14 +12,19 @@ let view = null;
 browser.menus.create({
   id: MENU_ITEM,
   title: "Convert to…",
-  contexts: ["image"]
+  contexts: ["image", "video"]
 });
 
 // The return value is ignored by Firefox; it is returned so a failure shows up as
 // a rejection in the console instead of disappearing.
+// Each kind of media goes to its own section. An unknown mediaType is treated as
+// an image, which is the only context the entry claimed before.
 browser.menus.onClicked.addListener((info) => {
   if (info.menuItemId !== MENU_ITEM) return undefined;
-  return showInApp({ section: "images", image: info.srcUrl || "" });
+  const url = info.srcUrl || "";
+  return info.mediaType === "video"
+    ? showInApp({ section: "videos", video: url })
+    : showInApp({ section: "images", image: url });
 });
 
 // Firefox ignores the windowTypes filter on windows.getAll and getLastFocused, so
