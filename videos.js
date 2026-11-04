@@ -18,9 +18,11 @@
   // video side is gated on this; images never ask.
   function paintHelper(state) {
     el.helper.className = `notice ${state.ready ? "ready" : state.blocking ? "blocked" : "warn"}`;
+    // Ready needs no headline: the versions and the folder are the useful part,
+    // and they are what the line becomes.
     el.helperTitle.textContent = state.title;
+    el.helperTitle.hidden = state.ready;
     el.helperDetail.textContent = state.detail;
-    el.helperDetail.hidden = state.ready;
     el.helperSteps.textContent = "";
     for (const step of state.steps) {
       const item = document.createElement("li");
