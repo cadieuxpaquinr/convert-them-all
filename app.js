@@ -31,18 +31,20 @@
   CTAAbout.mount();
   CTAImages.mount();
 
-  // The context menu entry picks the section and the image that goes with it.
-  function apply(sel) {
-    if (!sel) return;
-    if (sel.section) show(sel.section);
-    CTAImages.set(sel.image);
+  // The background says which section to show, and gives an image only when one
+  // comes with it: opening the app from the toolbar or the shortcut asks for the
+  // home page and leaves whatever the Images section was holding.
+  function apply(view) {
+    if (!view) return;
+    if (view.section) show(view.section);
+    if ("image" in view) CTAImages.set(view.image);
   }
 
   browser.runtime.onMessage.addListener((msg) => {
-    if (msg && msg.type === "selection") apply(msg);
+    if (msg && msg.type === "show") apply(msg);
   });
 
   // Pulled, not pushed: the background cannot message this page until it has
   // loaded, and a window it just opened has not.
-  browser.runtime.sendMessage({ type: "get-selection" }).then(apply).catch(() => {});
+  browser.runtime.sendMessage({ type: "get-view" }).then(apply).catch(() => {});
 })();

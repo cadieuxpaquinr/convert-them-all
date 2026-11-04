@@ -3,9 +3,9 @@ const MENU_ITEM = "convert-image";
 
 let appWindowId = null;
 let lastNormalWindowId = null;
-// What the app shows next. Held in memory, never in storage: a selection belongs
-// to the moment, not to the profile.
-let selection = null;
+// What the app shows next: a section, and an image when one comes with it.
+// Held in memory, never in storage: it belongs to the moment, not the profile.
+let view = null;
 
 // A top-level item takes its icon from the manifest; the icons option on
 // menus.create() would only apply to a submenu.
@@ -89,14 +89,14 @@ async function openApp() {
   appWindowId = win.id;
 }
 
-// Push to an app that is already up; otherwise open it and let it pull the
-// selection once loaded, which is what keeps this free of a load race.
+// Push to an app that is already up; otherwise open it and let it pull the view
+// once loaded, which is what keeps this free of a load race.
 async function showInApp(next) {
-  selection = next;
+  view = next;
   if (appWindowId != null) {
     try {
       await browser.windows.update(appWindowId, { focused: true });
-      await browser.runtime.sendMessage(Object.assign({ type: "selection" }, next));
+      await browser.runtime.sendMessage(Object.assign({ type: "show" }, next));
       return;
     } catch (e) {
       // The window is gone, or its page is still loading and nothing is
@@ -106,15 +106,20 @@ async function showInApp(next) {
   await openApp();
 }
 
+// No image key: the Images section keeps whatever it was holding.
+function openHome() {
+  return showInApp({ section: "home" });
+}
+
 browser.windows.onRemoved.addListener((id) => {
   if (id === appWindowId) appWindowId = null;
   if (id === lastNormalWindowId) lastNormalWindowId = null;
 });
 
-browser.browserAction.onClicked.addListener(() => openApp());
+browser.browserAction.onClicked.addListener(() => openHome());
 
 browser.commands.onCommand.addListener((name) => {
-  if (name === COMMAND) openApp();
+  if (name === COMMAND) openHome();
 });
 
 // Never open the tab in the app window itself, which is a popup: a plain
@@ -133,10 +138,10 @@ async function openUrl(msg) {
 browser.runtime.onMessage.addListener((msg, sender) => {
   switch (msg && msg.type) {
     case "open-app":
-      return openApp();
+      return openHome();
     case "open-url":
       return openUrl(msg);
-    case "get-selection":
-      return Promise.resolve(selection);
+    case "get-view":
+      return Promise.resolve(view);
   }
 });
