@@ -11,7 +11,7 @@ let view = null;
 // menus.create() would only apply to a submenu.
 browser.menus.create({
   id: MENU_ITEM,
-  title: "Convert to…",
+  title: "Download / Convert to…",
   contexts: ["image", "video"]
 });
 
@@ -22,8 +22,10 @@ browser.menus.create({
 browser.menus.onClicked.addListener((info) => {
   if (info.menuItemId !== MENU_ITEM) return undefined;
   const url = info.srcUrl || "";
+  // The page address is what yt-dlp wants, and for a streamed video it is the
+  // only thing there is: the element itself has no address of its own.
   return info.mediaType === "video"
-    ? showInApp({ section: "videos", video: url })
+    ? showInApp({ section: "videos", video: url, page: info.pageUrl || "" })
     : showInApp({ section: "images", image: url });
 });
 
@@ -127,6 +129,21 @@ browser.commands.onCommand.addListener((name) => {
   if (name === COMMAND) openHome();
 });
 
+// The address of the page the user was last looking at. Reading tab.url needs
+// the tabs permission; activeTab does not reach here, because the app window is
+// a popup and never the active tab.
+async function activeUrl() {
+  const win = await normalWindow();
+  if (!win) return { url: "" };
+  try {
+    const [tab] = await browser.tabs.query({ active: true, windowId: win.id });
+    if (!tab || !/^https?:/.test(tab.url || "")) return { url: "" };
+    return { url: tab.url, title: tab.title || "" };
+  } catch (e) {
+    return { url: "" };
+  }
+}
+
 // Never open the tab in the app window itself, which is a popup: a plain
 // tabs.create() with no windowId would land there. Target a normal browser
 // window and raise it, or open one when every browser window is closed.
@@ -148,5 +165,7 @@ browser.runtime.onMessage.addListener((msg, sender) => {
       return openUrl(msg);
     case "get-view":
       return Promise.resolve(view);
+    case "active-url":
+      return activeUrl();
   }
 });

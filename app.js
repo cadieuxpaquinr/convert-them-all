@@ -45,7 +45,7 @@
     if (!view) return;
     if (view.section) show(view.section);
     if ("image" in view) CTAImages.set(view.image);
-    if ("video" in view) CTAVideos.set(view.video);
+    if ("video" in view) CTAVideos.set(view.video, view.page);
   }
 
   browser.runtime.onMessage.addListener((msg) => {
