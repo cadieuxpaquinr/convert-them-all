@@ -41,6 +41,18 @@
     .row button { padding: 8px 12px; border: 0; border-radius: 6px; cursor: pointer;
       font: inherit; background: var(--button-bg); color: inherit; }
     .row button.primary { background: var(--accent); color: var(--accent-fg); }
+    .row button.danger { background: var(--error); color: var(--bg); }
+    dialog { max-width: 420px; padding: 18px 20px; border-radius: 8px;
+      border: 1px solid var(--line); background: var(--bg); color: var(--fg); }
+    dialog::backdrop { background: rgba(0, 0, 0, 0.45); }
+    dialog h2 { margin-top: 0; }
+    dialog ul { margin: 6px 0; padding-left: 20px; color: var(--muted); }
+    dialog .row { justify-content: flex-end; }
+    dialog .shout { font-weight: 600; letter-spacing: 0.08em; margin-bottom: 2px; }
+    /* Full contrast, not the muted colour the rest of the hint carries. */
+    dialog .hint strong { color: var(--fg); }
+    .ok { color: var(--ok); }
+    dialog p { margin: 10px 0 0; }
     .link { padding: 0; border: 0; background: none; font: inherit; cursor: pointer;
       color: var(--accent); text-align: left; display: block; margin-bottom: 8px; }
     .status { margin-top: 16px; min-height: 18px; color: var(--ok); }
@@ -76,9 +88,11 @@
 <body>
   <nav id="sections">
     <div class="top">
-      <button data-section="files">Files</button>
-      <button data-section="videos">Videos</button>
       <button data-section="images">Images</button>
+      <button data-section="videos">Videos</button>
+      <button data-section="audio">Audio</button>
+      <button data-section="websites">Websites</button>
+      <button data-section="files">Files</button>
     </div>
     <div class="bottom">
       <hr>
@@ -95,16 +109,6 @@
     <section id="home">
       <h1>Convert Them All</h1>
       <p>PLACEHOLDER home page. Pick a section on the left.</p>
-    </section>
-
-    <section id="files" hidden>
-      <h1>Files</h1>
-      <p>PLACEHOLDER. No feature yet.</p>
-    </section>
-
-    <section id="videos" hidden>
-      <h1>Videos</h1>
-      <p>PLACEHOLDER. No feature yet.</p>
     </section>
 
     <section id="images" hidden>
@@ -134,10 +138,36 @@
             <button id="download">Download</button>
           </div>
           <div id="image-status" class="status"></div>
+          <div id="forget-site" hidden>
+            <p class="hint" id="forget-text"></p>
+            <div class="row">
+              <button id="forget-button">Remove permissions</button>
+            </div>
+          </div>
           <p class="hint">Download saves the converted image, or the original one when
             you have not converted it yet. Everything happens on your computer.</p>
         </div>
       </div>
+    </section>
+
+    <section id="videos" hidden>
+      <h1>Videos</h1>
+      <p>PLACEHOLDER. No feature yet.</p>
+    </section>
+
+    <section id="audio" hidden>
+      <h1>Audio</h1>
+      <p>PLACEHOLDER. No feature yet.</p>
+    </section>
+
+    <section id="websites" hidden>
+      <h1>Websites</h1>
+      <p>PLACEHOLDER. No feature yet.</p>
+    </section>
+
+    <section id="files" hidden>
+      <h1>Files</h1>
+      <p>PLACEHOLDER. No feature yet.</p>
     </section>
 
     <section id="report" hidden>
@@ -178,6 +208,7 @@
       </div>
       <div class="row">
         <button id="geometry-save" class="primary">Save</button>
+        <button id="geometry-current">Use current</button>
         <button id="geometry-reset">Reset to default</button>
       </div>
       <p class="hint">Applies the next time the app opens. Leave X and Y empty to
@@ -186,10 +217,7 @@
       <h2>Conversions</h2>
       <label class="check"><input type="checkbox" id="all-sites">
         <span>Allow conversions on all sites</span></label>
-      <p class="hint">Off, the add-on asks for one site at a time, the first time you
-        convert an image from it. On, it asks once and never again. Turning this off
-        again leaves the single sites you already allowed; those are managed from the
-        Add-ons page.</p>
+      <p class="hint">Give permission one time instead of once for each new site.</p>
 
       <h2>Theme</h2>
       <fieldset>
@@ -200,6 +228,25 @@
 
       <div id="status" class="status"></div>
     </section>
+
+    <dialog id="sites-dialog">
+      <h2>Permission removed <span class="ok">successfully</span></h2>
+      <p>Conversions no longer have access to every site.</p>
+      <div id="sites-rest">
+        <p class="shout">BUT</p>
+        <p id="sites-count"></p>
+        <ul id="sites-list"></ul>
+        <p class="hint">Removing them means being asked again the next time you convert
+          an image from them.</p>
+        <p class="hint">The add-on asks this only to make it easier for you, because it
+          looks like you want to remove permissions. <strong>Clicking &ldquo;Keep current
+          permissions&rdquo; does not turn access to every site back on.</strong></p>
+      </div>
+      <div class="row">
+        <button id="sites-keep">Keep current permissions</button>
+        <button id="sites-remove" class="danger">Remove permissions</button>
+      </div>
+    </dialog>
   </main>
 
   <script src="platform.js"></script>

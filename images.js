@@ -63,6 +63,7 @@
     if (CTAConvert.sameFormat(source, format.id)) {
       replaceResult(null);
       showPreview(source);
+      hideForget();
       el.state.textContent = `Already ${format.label}, ready for download`;
       setStatus("");
       return;
@@ -82,6 +83,7 @@
     }
 
     setStatus("Converting…");
+    hideForget();
     el.convert.disabled = true;
     try {
       const next = await CTAConvert.run({ url: source, format: format.id });
@@ -97,6 +99,31 @@
     }
   }
 
+  function hideForget() {
+    el.forget.hidden = true;
+  }
+
+  // Offered only when there is really something to drop: a site allowed on its
+  // own. A data: image granted nothing, and the all-sites grant was deliberate
+  // and belongs to Settings.
+  async function offerForget() {
+    let granted = false;
+    try {
+      granted = await CTAAccess.hasSite(source);
+    } catch (e) {
+      granted = false;
+    }
+    if (!granted) {
+      hideForget();
+      return;
+    }
+    el.forgetText.textContent =
+      `The add-on no longer needs access to ${CTAAccess.hostOf(source)}. You can remove `
+      + "it; converting another image from that site will ask for it again. "
+      + "This is optional.";
+    el.forget.hidden = false;
+  }
+
   // Before a conversion this saves the original, which is why it carries the
   // source extension rather than the one picked in the list.
   async function download() {
@@ -108,6 +135,7 @@
     try {
       await browser.downloads.download({ url: target.url, filename, saveAs: false });
       setStatus(`Saved as ${filename}.`);
+      await offerForget();
     } catch (e) {
       setStatus("Could not save that image.", true);
     }
@@ -135,6 +163,9 @@
     el.convert = document.getElementById("convert");
     el.download = document.getElementById("download");
     el.status = document.getElementById("image-status");
+    el.forget = document.getElementById("forget-site");
+    el.forgetText = document.getElementById("forget-text");
+    el.forgetButton = document.getElementById("forget-button");
 
     placeholder = el.selection.textContent;
 
@@ -148,8 +179,20 @@
       el.missing.hidden = false;
     });
 
+    el.forgetButton.addEventListener("click", async () => {
+      const host = CTAAccess.hostOf(source);
+      try {
+        await CTAAccess.revokeSite(source);
+        setStatus(`Access to ${host} removed.`);
+      } catch (e) {
+        setStatus("Could not remove that permission.", true);
+      }
+      hideForget();
+    });
+
     enable(false);
     clearPreview();
+    hideForget();
   }
 
   function set(url) {
@@ -159,6 +202,7 @@
     el.selection.textContent = source ? `Selected: ${short(source)}` : placeholder;
     el.state.textContent = "Original";
     setStatus("");
+    hideForget();
     enable(!!source);
 
     if (!source) {

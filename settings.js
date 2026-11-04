@@ -2,6 +2,9 @@
  * The Settings pane: shortcut, app window geometry, theme. Mounted by app.js.
  */
 (() => {
+  // How many allowed sites the dialog names before it counts the rest.
+  const LISTED = 3;
+
   const KEY_NAMES = {
     " ": "Space",
     ",": "Comma",
@@ -141,6 +144,28 @@
       }
     });
 
+    // The rectangle windows.getCurrent() reports is the one windows.create()
+    // takes, so what is stored here reopens the window exactly where it sits.
+    document.getElementById("geometry-current").addEventListener("click", async () => {
+      try {
+        const win = await browser.windows.getCurrent();
+        // Wayland never tells a window where it is, so Firefox has 0,0 to report
+        // and placing the window again would do nothing either. Keep the size and
+        // leave the position unset, which centres the window next time rather
+        // than pinning it to the top-left corner.
+        const unplaced = !win.left && !win.top;
+        showGeometry(await CTAGeometry.save(unplaced
+          ? { width: win.width, height: win.height }
+          : { left: win.left, top: win.top, width: win.width, height: win.height }));
+        setStatus(unplaced
+          ? "Saved the size only: this system reports no window position, as Wayland "
+            + "does, and X and Y have no effect there."
+          : "Saved this window's size and position.");
+      } catch (e) {
+        setStatus("Could not read this window.", true);
+      }
+    });
+
     document.getElementById("geometry-reset").addEventListener("click", async () => {
       try {
         showGeometry(await CTAGeometry.reset());
@@ -158,6 +183,54 @@
     }
 
     const allSites = document.getElementById("all-sites");
+    const dialog = document.getElementById("sites-dialog");
+    const sitesCount = document.getElementById("sites-count");
+    const sitesList = document.getElementById("sites-list");
+    const sitesRest = document.getElementById("sites-rest");
+    const sitesKeep = document.getElementById("sites-keep");
+    const sitesRemove = document.getElementById("sites-remove");
+
+    // Shown after the all-sites grant goes, because the sites allowed one at a
+    // time survive it and nothing else in Firefox offers to clear them from here.
+    async function openSites() {
+      let sites = [];
+      try {
+        sites = await CTAAccess.grantedSites();
+      } catch (e) {
+        sites = [];
+      }
+      sitesList.textContent = "";
+      // Only the first few, so a long list cannot push the buttons off screen.
+      for (const origin of sites.slice(0, LISTED)) {
+        const item = document.createElement("li");
+        item.textContent = CTAAccess.hostOf(origin) || origin;
+        sitesList.appendChild(item);
+      }
+      if (sites.length > LISTED) {
+        const item = document.createElement("li");
+        item.textContent = `and ${sites.length - LISTED} more`;
+        sitesList.appendChild(item);
+      }
+      const many = sites.length > 1;
+      sitesCount.textContent =
+        `${sites.length} site${many ? "s are" : " is"} still allowed one at a time:`;
+      sitesRest.hidden = !sites.length;
+      sitesRemove.hidden = !sites.length;
+      sitesKeep.textContent = sites.length ? "Keep current permissions" : "Close";
+      dialog.showModal();
+    }
+
+    sitesKeep.addEventListener("click", () => dialog.close());
+
+    sitesRemove.addEventListener("click", async () => {
+      try {
+        await CTAAccess.revokeSites();
+        setStatus("Site permissions removed.");
+      } catch (e) {
+        setStatus("Could not remove the site permissions.", true);
+      }
+      dialog.close();
+    });
 
     // Read back from Firefox, never from the click, so a refused prompt leaves
     // the box showing what is really granted.
@@ -174,6 +247,9 @@
         } else {
           await CTAAccess.revokeAll();
           setStatus("Conversions ask for one site at a time again.");
+          await loadAccess();
+          await openSites();
+          return;
         }
       } catch (e) {
         setStatus("Could not change the site permission.", true);
