@@ -9,6 +9,8 @@
 
   const el = {};
   let placeholder = "";
+  // Where the helper notice's button points, when it has one.
+  let link = null;
 
   function short(url) {
     return url.length > MAX_URL ? `${url.slice(0, MAX_URL)}…` : url;
@@ -112,6 +114,9 @@
       }
       el.helperSteps.appendChild(item);
     }
+    link = state.link;
+    el.helperLink.hidden = !link;
+    if (link) el.helperLink.textContent = link.text;
     el.helperActions.hidden = state.ready;
   }
 
@@ -130,6 +135,7 @@
     el.helperDetail = document.getElementById("helper-detail");
     el.helperSteps = document.getElementById("helper-steps");
     el.helperActions = document.getElementById("helper-actions");
+    el.helperLink = document.getElementById("helper-link");
     el.selection = document.getElementById("video-selection");
     el.url = document.getElementById("video-url");
     el.detect = document.getElementById("video-detect");
@@ -166,6 +172,12 @@
 
     document.getElementById("helper-recheck")
       .addEventListener("click", () => refresh().catch(() => {}));
+    // The background places the tab in a normal window: this one is a popup.
+    el.helperLink.addEventListener("click", () => {
+      if (link) {
+        browser.runtime.sendMessage({ type: "open-url", url: link.url }).catch(() => {});
+      }
+    });
     el.download.addEventListener("click", () => download().catch(() => {}));
     el.detect.addEventListener("click", () => detect().catch(() => {}));
     el.cancel.addEventListener("click", () => CTANative.stop());

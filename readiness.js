@@ -19,6 +19,9 @@
   // without complaint. Matching its own threshold is the honest number.
   const STALE_DAYS = 90;
 
+  // The project's own page, which outlives any package name written down here.
+  const YTDLP_DOCS = "https://github.com/yt-dlp/yt-dlp#installation";
+
   const COMMANDS = {
     linux: {
       ytdlp: "sudo apt install yt-dlp",
@@ -61,8 +64,12 @@
     return Math.round((today.getTime() - released) / 86400000);
   }
 
-  function state(id, blocking, title, detail, steps) {
-    return { id, blocking, ready: id === "ready", title, detail, steps: steps || [] };
+  function state(id, blocking, title, detail, steps, link) {
+    return {
+      id, blocking, ready: id === "ready", title, detail,
+      steps: steps || [],
+      link: link || null
+    };
   }
 
   function check(report, os, today) {
@@ -99,13 +106,15 @@
         "Video downloads need yt-dlp",
         "yt-dlp is the program that knows how to read a video out of a web page. "
         + "The helper could not find it.",
-        [{ text: "Install it:", command: how.ytdlp }, { text: how.note }]);
+        [{ text: "Install it:", command: how.ytdlp }, { text: how.note }],
+        { text: "Get yt-dlp", url: YTDLP_DOCS });
     }
     if (ytdlp.broken) {
       return state("ytdlp-broken", true,
         "yt-dlp is installed but will not run",
         ytdlp.broken,
-        [{ text: "Install it again:", command: how.ytdlp }]);
+        [{ text: "Install it again:", command: how.ytdlp }],
+        { text: "Get yt-dlp", url: YTDLP_DOCS });
     }
 
     const ffmpeg = report.ffmpeg || {};
@@ -123,7 +132,8 @@
         `yt-dlp is ${Math.floor(age / 30)} months old`,
         "Sites change often, and an old copy fails on them in ways that look like "
         + "faults in this add-on.",
-        [{ text: "Update it:", command: how.update }]);
+        [{ text: "Update it:", command: how.update }],
+        { text: "Update yt-dlp", url: YTDLP_DOCS });
     }
 
     const runtime = report.jsruntime || {};
@@ -157,5 +167,5 @@
       []);
   }
 
-  window.CTAReady = { NEEDS_HOST, STALE_DAYS, commands, check };
+  window.CTAReady = { NEEDS_HOST, STALE_DAYS, YTDLP_DOCS, commands, check };
 })();
