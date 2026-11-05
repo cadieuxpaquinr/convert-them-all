@@ -23,6 +23,14 @@
     { value: "360", label: "360p" }
   ];
 
+  // Crowd-sourced segment data, and only YouTube is covered by it.
+  const SPONSOR = {
+    id: "sponsorblock",
+    label: "Skip sponsored segments (BETA feature - YouTube only)",
+    type: "check",
+    youtubeOnly: true
+  };
+
   const FIELDS = {
     webm: [
       { id: "height", label: "Resolution", options: HEIGHTS },
@@ -44,7 +52,8 @@
           { value: "vp9", label: "VP9" },
           { value: "avc1", label: "H.264" }
         ]
-      }
+      },
+      SPONSOR
     ],
     mp4: [
       { id: "height", label: "Resolution", options: HEIGHTS },
@@ -60,7 +69,8 @@
         hint: "Repackaging keeps the best picture but fails on videos mp4 cannot "
           + "hold. Compatible always plays, and is limited to the resolutions the "
           + "site offers in H.264."
-      }
+      },
+      SPONSOR
     ],
     mp3: [
       {
@@ -87,7 +97,8 @@
       vcodec: "",
       method: "repackage",
       bitrate: "",
-      keepVideo: false
+      keepVideo: false,
+      sponsorblock: false
     };
   }
 
@@ -136,15 +147,35 @@
       };
     }
     if (picked.container === "mp4") {
-      return { container: "mp4", height: picked.height, method: picked.method };
+      return {
+        container: "mp4",
+        height: picked.height,
+        method: picked.method,
+        sponsorblock: !!picked.sponsorblock
+      };
     }
     return {
       container: "webm",
       height: picked.height,
       fps: picked.fps,
-      vcodec: picked.vcodec
+      vcodec: picked.vcodec,
+      sponsorblock: !!picked.sponsorblock
     };
   }
 
-  window.CTAVideoFormat = { OUTPUTS, fields, defaults, offers, intent };
+  // The segment database only covers YouTube, so the tick is offered only when
+  // the link is one. Read from the address, which needs no call to anything.
+  function isYouTube(url) {
+    try {
+      const host = new URL(String(url)).hostname.replace(/^www\./, "");
+      return host === "youtube.com" || host === "m.youtube.com"
+        || host === "youtu.be" || host === "music.youtube.com";
+    } catch (e) {
+      return false;
+    }
+  }
+
+  window.CTAVideoFormat = {
+    OUTPUTS, fields, defaults, offers, intent, isYouTube
+  };
 })();

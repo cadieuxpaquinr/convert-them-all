@@ -83,13 +83,19 @@
         const box = document.createElement("input");
         box.type = "checkbox";
         box.id = `opt-${field.id}`;
-        box.checked = !!choice[field.id];
+        // The segment database covers YouTube and nothing else, so the tick is
+        // only live when the link is one.
+        const usable = !field.youtubeOnly
+          || CTAVideoFormat.isYouTube(el.url.value.trim());
+        box.disabled = !usable;
+        box.checked = usable && !!choice[field.id];
         box.addEventListener("change", () => {
           choice[field.id] = box.checked;
           remember();
         });
         const text = document.createElement("span");
         text.textContent = field.label;
+        if (!usable) row.classList.add("off");
         row.append(box, text);
         el.options.appendChild(row);
         continue;
@@ -157,10 +163,8 @@
   async function ask() {
     const url = el.url.value.trim();
     probed = null;
-    if (!url || blocked) {
-      renderOptions();
-      return;
-    }
+    renderOptions();
+    if (!url || blocked) return;
     el.offers.textContent = "Reading what this video offers…";
     el.offers.hidden = false;
     const answer = await CTANative.ask({ type: "probe", url }, 70000);

@@ -12,7 +12,10 @@
 (() => {
   // Raise this when the add-on starts needing something an older helper cannot
   // do. An out-of-date helper is then told to update instead of misbehaving.
-  const NEEDS_HOST = 2;
+  // Must match HOST_VERSION in host/cta_host.py. It sat at 2 while the helper
+  // had moved to 3, so a helper left behind by an older install counted as
+  // current and then refused every probe as an unknown request.
+  const NEEDS_HOST = 4;
 
   // Counted in releases, not in days: yt-dlp shipped on 4 July, 19 August,
   // 21 October and 26 October, so days since a release say nothing about being

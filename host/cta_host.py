@@ -30,7 +30,7 @@ from pathlib import Path
 # Raised when the add-on needs something this file does not yet do, so an old
 # helper left behind by an earlier install is told to update rather than
 # failing in a way nobody can read.
-HOST_VERSION = 3
+HOST_VERSION = 4
 
 TOOL_TIMEOUT = 15
 
@@ -54,6 +54,11 @@ RATES = (30, 60)
 VCODECS = ("av01", "vp9", "avc1")
 METHODS = ("repackage", "compatible")
 BITRATES = ("320", "256", "192", "128", "96")
+
+# SponsorBlock is a YouTube-only postprocessor fed by a volunteer database, so
+# only the plainly sponsored segments are cut: intros and filler are somebody
+# else's judgement and are left alone.
+SPONSOR_CATEGORIES = "sponsor"
 
 # Picks streams mp4 can always hold, which is what costs resolution on sites
 # that keep their best picture in AV1 or VP9.
@@ -339,6 +344,9 @@ def format_args(choice):
         sort.append(f"vcodec:{vcodec}")
 
     args = ["--format-sort", ",".join(sort)] if sort else []
+
+    if choice.get("sponsorblock"):
+        args += ["--sponsorblock-remove", SPONSOR_CATEGORIES]
 
     if container == "webm":
         # Not every pair fits webm; mkv takes whatever is left over.
