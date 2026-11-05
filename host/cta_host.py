@@ -30,7 +30,7 @@ from pathlib import Path
 # Raised when the add-on needs something this file does not yet do, so an old
 # helper left behind by an earlier install is told to update rather than
 # failing in a way nobody can read.
-HOST_VERSION = 2
+HOST_VERSION = 3
 
 TOOL_TIMEOUT = 15
 
@@ -41,6 +41,27 @@ FILE_MARK = "CTAFILE|"
 
 # Enough of the tail to explain a failure, not enough to flood the add-on.
 TAIL_LINES = 40
+
+# Reading what a video offers is quick, but not instant on a slow site.
+PROBE_TIMEOUT = 60
+
+# What the add-on is allowed to ask for. It sends intent, never arguments: a
+# page's content reaches this through the context menu, so the same boundary
+# that stops a URL becoming an option has to hold for the options themselves.
+CONTAINERS = ("webm", "mp4", "mp3")
+HEIGHTS = (2160, 1440, 1080, 720, 480, 360)
+RATES = (30, 60)
+VCODECS = ("av01", "vp9", "avc1")
+METHODS = ("repackage", "compatible")
+BITRATES = ("320", "256", "192", "128", "96")
+
+# Picks streams mp4 can always hold, which is what costs resolution on sites
+# that keep their best picture in AV1 or VP9.
+COMPATIBLE = "bv*[vcodec^=avc1]+ba[acodec^=mp4a]/b[ext=mp4]/b"
+
+# yt-dlp writes VP9 as both vp9 and vp09 depending on the source, and they are
+# the same thing to anyone reading the panel.
+CODEC_FAMILIES = {"vp09": "vp9", "h264": "avc1", "avc3": "avc1"}
 
 # The running yt-dlp, so it can be stopped when Firefox lets go of the helper.
 child = None
@@ -281,6 +302,110 @@ def wanted_folder(path):
     return folder, None
 
 
+def one_of(value, allowed, name):
+    if value is None or value == "":
+        return None
+    for candidate in allowed:
+        if str(value) == str(candidate):
+            return candidate
+    raise ValueError(f"{name} cannot be {value!r}")
+
+
+def format_args(choice):
+    """Turn what was chosen into yt-dlp arguments, refusing anything else."""
+    choice = choice if isinstance(choice, dict) else {}
+    container = one_of(choice.get("container"), CONTAINERS, "container") or "webm"
+
+    if container == "mp3":
+        args = ["--extract-audio", "--audio-format", "mp3"]
+        bitrate = one_of(choice.get("bitrate"), BITRATES, "bitrate")
+        if bitrate:
+            args += ["--audio-quality", f"{bitrate}K"]
+        if choice.get("keepVideo"):
+            args.append("--keep-video")
+        return args
+
+    # A preference, not a filter: the nearest below is taken when the exact one
+    # does not exist, so asking for 2160p on a small video still downloads it.
+    sort = []
+    height = one_of(choice.get("height"), HEIGHTS, "height")
+    if height:
+        sort.append(f"res:{height}")
+    rate = one_of(choice.get("fps"), RATES, "fps")
+    if rate:
+        sort.append(f"fps:{rate}")
+    vcodec = one_of(choice.get("vcodec"), VCODECS, "vcodec")
+    if vcodec:
+        sort.append(f"vcodec:{vcodec}")
+
+    args = ["--format-sort", ",".join(sort)] if sort else []
+
+    if container == "webm":
+        # Not every pair fits webm; mkv takes whatever is left over.
+        return args + ["--merge-output-format", "webm/mkv"]
+
+    method = one_of(choice.get("method"), METHODS, "method") or "repackage"
+    if method == "compatible":
+        return args + ["--format", COMPATIBLE, "--merge-output-format", "mp4"]
+    # Lossless container change, which fails when mp4 cannot hold the codecs.
+    return args + ["--remux-video", "mp4"]
+
+
+def probe(message):
+    """What this video actually offers, so the panels can grey what it lacks."""
+    url = wanted_url(message.get("url", ""))
+    if not url:
+        return {"type": "error", "reason": "bad-url",
+                "detail": "Only http and https addresses can be read."}
+
+    ytdlp = shutil.which("yt-dlp")
+    if not ytdlp:
+        return {"type": "error", "reason": "no-ytdlp",
+                "detail": "yt-dlp is not installed, or not on the PATH."}
+
+    try:
+        done = subprocess.run(
+            [ytdlp, "--no-config", "--no-warnings", "--no-playlist", "-J", "--", url],
+            capture_output=True, text=True, timeout=PROBE_TIMEOUT, shell=False,
+        )
+    except (OSError, subprocess.SubprocessError) as error:
+        return {"type": "error", "reason": "probe-failed", "detail": str(error)}
+
+    if done.returncode != 0:
+        tail = (done.stderr or "").strip().splitlines()[-TAIL_LINES:]
+        return {"type": "error", "reason": "probe-failed", "detail": "\n".join(tail)}
+
+    try:
+        info = json.loads(done.stdout)
+    except ValueError as error:
+        return {"type": "error", "reason": "probe-failed", "detail": str(error)}
+
+    heights, rates, codecs, mp4_heights = set(), set(), set(), set()
+    for form in info.get("formats") or []:
+        vcodec = (form.get("vcodec") or "none").split(".")[0]
+        if vcodec == "none":
+            continue
+        vcodec = CODEC_FAMILIES.get(vcodec, vcodec)
+        height = form.get("height")
+        if height:
+            heights.add(int(height))
+            if vcodec == "avc1":
+                mp4_heights.add(int(height))
+        if form.get("fps"):
+            rates.add(int(round(form["fps"])))
+        codecs.add(vcodec)
+
+    return {
+        "type": "formats",
+        "title": info.get("title") or "",
+        "duration": info.get("duration") or 0,
+        "heights": sorted(heights, reverse=True),
+        "fps": sorted(rates),
+        "vcodecs": sorted(codecs),
+        "mp4Heights": sorted(mp4_heights, reverse=True),
+    }
+
+
 def download(message):
     global child
 
@@ -297,6 +422,11 @@ def download(message):
     if not ytdlp:
         return {"type": "error", "reason": "no-ytdlp",
                 "detail": "yt-dlp is not installed, or not on the PATH."}
+
+    try:
+        chosen = format_args(message.get("format"))
+    except ValueError as error:
+        return {"type": "error", "reason": "bad-format", "detail": str(error)}
 
     # The address goes after --, so one that starts with a dash cannot be read
     # as an option. No shell is involved at any point.
@@ -320,7 +450,7 @@ def download(message):
     if runtime["found"] and runtime["name"] != "deno":
         command += ["--js-runtimes", runtime["name"]]
 
-    command += ["--", url]
+    command += chosen + ["--", url]
 
     try:
         child = subprocess.Popen(
@@ -379,6 +509,8 @@ def handle(message):
         return {"type": "folder", **folder_state(message.get("path", ""))}
     if kind == "download":
         return download(message)
+    if kind == "probe":
+        return probe(message)
     return {
         "type": "error",
         "reason": "unknown-request",

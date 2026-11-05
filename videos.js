@@ -1,8 +1,11 @@
 /*
- * The Videos pane: the video the "Convert to…" entry handed over, and nothing
- * more. There is no video converter yet, so this only shows what arrived.
+ * The Videos pane: the link to work on, the output to produce, and the download.
  *
- * Same shape as images.js, so the conversion work has somewhere to land.
+ * There is no preview any more. A thumbnail needs a media address, and the
+ * common case has none: a site streaming in pieces hands over nothing, or a
+ * blob: that only its own page can read. The box was empty in every real test.
+ * What sits there instead is the choice: the output on the left, and whatever
+ * that output has to offer on the right.
  */
 (() => {
   const MAX_URL = 120;
@@ -14,6 +17,10 @@
   // Set when the machine cannot download at all: the controls are held shut
   // rather than left to fail in a way that looks like a fault here.
   let blocked = false;
+  // What the link in the box turned out to offer, or null while unknown.
+  let probed = null;
+  // The output and its options, remembered between sessions.
+  let choice = null;
 
   function short(url) {
     return url.length > MAX_URL ? `${url.slice(0, MAX_URL)}…` : url;
@@ -43,6 +50,124 @@
     el.progress.hidden = !on;
   }
 
+  function remember() {
+    CTAVideoPrefs.save(choice).catch(() => {});
+  }
+
+  // Says the one thing the panels cannot: that asking for mp4 costs resolution
+  // on this particular video.
+  function showOffers() {
+    const heights = (probed && probed.heights) || [];
+    if (!heights.length) {
+      el.offers.hidden = true;
+      return;
+    }
+    const best = heights[0];
+    const mp4 = ((probed && probed.mp4Heights) || [])[0];
+    el.offers.textContent = mp4 && mp4 < best
+      ? `This video goes up to ${best}p, and to ${mp4}p as compatible mp4.`
+      : `This video goes up to ${best}p.`;
+    el.offers.hidden = false;
+  }
+
+  function renderOptions() {
+    el.options.textContent = "";
+    let hint = "";
+
+    for (const field of CTAVideoFormat.fields(choice.container)) {
+      if (field.hint) hint = field.hint;
+
+      if (field.type === "check") {
+        const row = document.createElement("label");
+        row.className = "check";
+        const box = document.createElement("input");
+        box.type = "checkbox";
+        box.id = `opt-${field.id}`;
+        box.checked = !!choice[field.id];
+        box.addEventListener("change", () => {
+          choice[field.id] = box.checked;
+          remember();
+        });
+        const text = document.createElement("span");
+        text.textContent = field.label;
+        row.append(box, text);
+        el.options.appendChild(row);
+        continue;
+      }
+
+      const row = document.createElement("label");
+      row.className = "field";
+      const name = document.createElement("span");
+      name.textContent = field.label;
+      const select = document.createElement("select");
+      select.id = `opt-${field.id}`;
+
+      for (const option of field.options) {
+        const item = document.createElement("option");
+        item.value = option.value;
+        item.textContent = option.label;
+        item.disabled = !CTAVideoFormat.offers(field.id, option.value, choice, probed);
+        select.appendChild(item);
+      }
+
+      select.value = choice[field.id];
+      // Something remembered that this video cannot give falls back to the best
+      // it has, rather than sitting there as a choice that would be ignored.
+      const picked = select.options[select.selectedIndex];
+      if (!picked || picked.disabled) {
+        select.value = field.options[0].value;
+        choice[field.id] = select.value;
+      }
+
+      select.addEventListener("change", () => {
+        choice[field.id] = select.value;
+        remember();
+        // Which resolutions are reachable depends on how mp4 is made.
+        if (field.id === "method") renderOptions();
+      });
+
+      row.append(name, select);
+      el.options.appendChild(row);
+    }
+
+    el.optionHint.textContent = hint;
+    el.optionHint.hidden = !hint;
+    showOffers();
+  }
+
+  async function start() {
+    choice = await CTAVideoPrefs.read();
+    for (const output of CTAVideoFormat.OUTPUTS) {
+      const item = document.createElement("option");
+      item.value = output.id;
+      item.textContent = output.label;
+      el.output.appendChild(item);
+    }
+    el.output.value = choice.container;
+    el.output.addEventListener("change", () => {
+      choice.container = el.output.value;
+      remember();
+      renderOptions();
+    });
+    renderOptions();
+  }
+
+  // Reading what a video offers costs a call to the site, so it happens when
+  // the link settles rather than on every keystroke. Not knowing greys nothing.
+  async function ask() {
+    const url = el.url.value.trim();
+    probed = null;
+    if (!url || blocked) {
+      renderOptions();
+      return;
+    }
+    el.offers.textContent = "Reading what this video offers…";
+    el.offers.hidden = false;
+    const answer = await CTANative.ask({ type: "probe", url }, 70000);
+    probed = answer && answer.type === "formats" ? answer : null;
+    renderOptions();
+  }
+
   async function download() {
     const url = el.url.value.trim();
     if (!url) {
@@ -56,7 +181,7 @@
 
     const directory = await CTAFolder.read().catch(() => "");
     const result = await CTANative.job(
-      { type: "download", url, directory },
+      { type: "download", url, directory, format: CTAVideoFormat.intent(choice) },
       (step) => {
         el.progress.textContent =
           `${step.percent || ""} at ${step.speed || "?"}, ${step.eta || "?"} left`;
@@ -95,6 +220,7 @@
     }
     el.url.value = answer.url;
     setStatus(answer.title ? `Found: ${answer.title}` : "Found the page address.");
+    await ask();
   }
 
   // What the machine can do, and what to do about it when it cannot. The whole
@@ -152,30 +278,12 @@
     el.progress = document.getElementById("video-progress");
     el.details = document.getElementById("video-details");
     el.raw = document.getElementById("video-raw");
-    el.preview = document.getElementById("video-preview");
-    el.missing = document.getElementById("video-missing");
+    el.output = document.getElementById("video-output");
+    el.options = document.getElementById("video-options");
+    el.optionHint = document.getElementById("video-option-hint");
+    el.offers = document.getElementById("video-offers");
 
     placeholder = el.selection.textContent;
-
-    // A video streamed in pieces has a blob: address that only its own page can
-    // read, so failing to load is expected rather than exceptional.
-    el.preview.addEventListener("error", () => {
-      el.preview.hidden = true;
-      el.missing.hidden = false;
-    });
-
-    // A thumbnail, never a player: seek a little way in so a frame is painted,
-    // rather than the black one many files start with. Seeking rather than a
-    // #t= fragment on the URL, which a blob: address will not take.
-    el.preview.addEventListener("loadedmetadata", () => {
-      const duration = el.preview.duration;
-      const at = Number.isFinite(duration) ? Math.min(0.1, duration / 2) : 0.1;
-      try {
-        el.preview.currentTime = at;
-      } catch (e) {
-        // Some sources refuse to seek; the first frame will have to do.
-      }
-    });
 
     document.getElementById("helper-recheck")
       .addEventListener("click", () => refresh().catch(() => {}));
@@ -191,51 +299,28 @@
     el.url.addEventListener("keydown", (e) => {
       if (e.key === "Enter") download().catch(() => {});
     });
+    // change fires when the field settles, which is when the probe is worth it.
+    el.url.addEventListener("change", () => ask().catch(() => {}));
 
-    reset();
+    el.selection.textContent = placeholder;
+    start().catch(() => {});
     refresh().catch(() => {});
   }
 
-  function clearPreview() {
-    el.preview.hidden = true;
-    el.preview.removeAttribute("src");
-  }
-
-  // Nothing handed over yet.
-  function reset() {
-    el.selection.textContent = placeholder;
-    el.missing.hidden = true;
-    clearPreview();
-  }
-
-  // No address at all is the certain case: a site that plays video in pieces
-  // feeds the element directly and leaves nothing to point at. Saying so beats
-  // leaving the pane looking as though the click did nothing.
-  //
-  // Anything else is judged by whether it loads, not by how it looks. A blob:
-  // address can be perfectly good, from a picked file, or useless, from another
-  // page, and only trying tells the two apart.
+  // The page address is what yt-dlp reads best, and for a streamed video it is
+  // the only one there is: the element itself has none.
   function set(url, page) {
     if (!el.selection) return;
-    if (page || url) {
-      el.url.value = page || url;
+    const link = page || url;
+    if (link) {
+      el.url.value = link;
       setStatus("");
       showDetails("");
+      ask().catch(() => {});
     }
-    if (!url) {
-      el.selection.textContent = page
-        ? "That video is streamed in pieces, so there is no frame to show. The page "
-          + "address is in the box above, and yt-dlp can read the video from it."
-        : "That video has no address of its own. The site streams it in pieces, so "
-          + "there is nothing here to show or to save.";
-      el.missing.hidden = true;
-      clearPreview();
-      return;
-    }
-    el.selection.textContent = `Selected: ${short(url)}`;
-    el.missing.hidden = true;
-    el.preview.hidden = false;
-    el.preview.src = url;
+    el.selection.textContent = link
+      ? `From: ${short(link)}`
+      : placeholder;
   }
 
   window.CTAVideos = { mount, set, refresh };

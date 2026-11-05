@@ -23,6 +23,13 @@
       command: (how) => how.update
     },
     {
+      match: /remux|not supported.*container|cannot be remuxed/i,
+      title: "mp4 cannot hold this video",
+      detail: "The picture is in a codec mp4 does not carry. Choose "
+        + "\u201cGuaranteed compatible\u201d in the options, which downloads a "
+        + "version mp4 can always hold, or keep webm."
+    },
+    {
       match: /ffmpeg|ffprobe/i,
       title: "ffmpeg is needed for this video",
       detail: "The picture and the sound come separately and have to be joined.",
