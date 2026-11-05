@@ -97,6 +97,9 @@
     #format option { padding: 3px 6px; }
     #image-name { width: 100%; max-width: 220px; }
     #video-url { width: 100%; max-width: 520px; }
+    /* Dimmed on purpose when the machine cannot download: the controls are not
+       broken, they are held shut, and it should look deliberate. */
+    #video-tools.gated { opacity: 0.4; pointer-events: none; filter: grayscale(0.4); }
     #download-folder { width: 100%; max-width: 420px; }
     #video-details { margin-top: 10px; color: var(--muted); font-size: 12px; }
     #video-raw { max-height: 160px; overflow: auto; padding: 8px; margin: 6px 0 0;
@@ -188,6 +191,7 @@
       <p id="video-selection" class="media-selection">Right-click a video on a page and
         choose &ldquo;Convert to&hellip;&rdquo;.</p>
 
+      <div id="video-tools">
       <h2>Video link</h2>
       <input id="video-url" type="text" spellcheck="false"
         placeholder="https://&hellip;">
@@ -211,6 +215,7 @@
       <p class="hint">A single frame, not a player. No converter yet. A video that a site
         streams in pieces, as YouTube does, has no address that works outside its own
         page, so it cannot be shown here.</p>
+      </div>
     </section>
 
     <section id="audio" hidden>

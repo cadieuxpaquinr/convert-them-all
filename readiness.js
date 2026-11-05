@@ -14,13 +14,16 @@
   // do. An out-of-date helper is then told to update instead of misbehaving.
   const NEEDS_HOST = 2;
 
-  // yt-dlp chases sites that change under it constantly. A week old is worth
-  // mentioning; a fortnight old is not worth trusting, and a copy from March
-  // failed on YouTube with a bare 403 that a current one downloaded without
-  // complaint. Past the second number the download is refused rather than
-  // allowed to fail in a way that looks like a fault in this add-on.
-  const SUGGEST_DAYS = 7;
-  const FORCE_DAYS = 15;
+  // Counted in releases, not in days: yt-dlp shipped on 4 July, 19 August,
+  // 21 October and 26 October, so days since a release say nothing about being
+  // current. One behind is worth a word; two behind is where sites start
+  // failing in ways that look like faults in this add-on, so the video side is
+  // held shut until it is updated.
+  const SUGGEST_BEHIND = 1;
+  const FORCE_BEHIND = 2;
+
+  // Only when the release list could not be fetched: a guess, and never a block.
+  const BLIND_SUGGEST_DAYS = 90;
 
   // The project's own page, which outlives any package name written down here.
   const YTDLP_DOCS = "https://github.com/yt-dlp/yt-dlp#installation";
@@ -57,6 +60,33 @@
 
   function commands(os) {
     return COMMANDS[os] || COMMANDS.linux;
+  }
+
+  // The wrong update command is worse than none: a copy in ~/.local/bin shadows
+  // the one apt manages, so "apt install --only-upgrade" would appear to work
+  // and change nothing at all.
+  const UPDATERS = {
+    self: () => "yt-dlp -U",
+    pipx: () => "pipx upgrade yt-dlp",
+    pip: (os) => (os === "win"
+      ? "py -m pip install -U yt-dlp"
+      : "python3 -m pip install -U yt-dlp"),
+    brew: () => "brew upgrade yt-dlp",
+    winget: () => "winget upgrade yt-dlp.yt-dlp",
+    system: (os) => commands(os).update
+  };
+
+  function updateCommand(install, os) {
+    const updater = UPDATERS[install];
+    return updater ? updater(os) : commands(os).update;
+  }
+
+  // Where the installed version sits in the list of known releases.
+  function releasesBehind(version, tags) {
+    if (!version || !tags || !tags.length) return null;
+    const at = tags.indexOf(String(version).trim());
+    // Older than everything the list knows about: at least that many behind.
+    return at === -1 ? tags.length : at;
   }
 
   // yt-dlp versions are dates: 2026.03.17.
@@ -129,14 +159,18 @@
         { text: "Get yt-dlp", url: YTDLP_DOCS });
     }
 
-    const age = ageInDays(ytdlp.version, now);
-    if (age !== null && age > FORCE_DAYS) {
+    const tags = (report.releases || {}).tags || [];
+    const behind = releasesBehind(ytdlp.version, tags);
+    const update = updateCommand(ytdlp.install, os);
+
+    if (behind !== null && behind >= FORCE_BEHIND) {
       return state("ytdlp-expired", true,
-        `yt-dlp is ${days(age)} old and cannot be relied on`,
-        "Sites change what they serve from week to week, and a copy this old fails "
-        + "on most of them. Downloading is held back until it is updated, because "
-        + "the failures look like faults in this add-on rather than an old program.",
-        [{ text: "Update it:", command: how.update }],
+        `yt-dlp is ${behind} releases behind`,
+        `You have ${ytdlp.version} and ${tags[0]} is out. Sites change what they `
+        + "serve, and a copy this far behind fails on many of them, which looks "
+        + "like a fault in this add-on rather than an old program. Video "
+        + "downloads stay shut until it is updated.",
+        [{ text: "Update it:", command: update }],
         { text: "Update yt-dlp", url: YTDLP_DOCS });
     }
 
@@ -175,12 +209,24 @@
         [{ text: "Install one:", command: how.jsruntime }, { text: how.note }]);
     }
 
-    if (age !== null && age > SUGGEST_DAYS) {
-      return state("ytdlp-old", false,
+    if (behind !== null && behind >= SUGGEST_BEHIND) {
+      return state("ytdlp-behind", false,
+        `A newer yt-dlp is out: ${tags[0]}`,
+        `You have ${ytdlp.version}. Some sites may not work until it is updated. `
+        + "Nothing is blocked yet.",
+        [{ text: "Update it:", command: update }],
+        { text: "Update yt-dlp", url: YTDLP_DOCS });
+    }
+
+    // No release list, so the only measure left is the date on the copy itself.
+    // It can suggest, never block: being offline is not being out of date.
+    const age = ageInDays(ytdlp.version, now);
+    if (behind === null && age !== null && age > BLIND_SUGGEST_DAYS) {
+      return state("ytdlp-maybe-old", false,
         `yt-dlp is ${days(age)} old`,
-        "Updating it now and then is what keeps downloads working, since sites "
-        + "change often. Nothing is blocked yet.",
-        [{ text: "Update it:", command: how.update }],
+        "The list of releases could not be fetched, so whether a newer one exists "
+        + "is unknown. A copy this old usually is behind.",
+        [{ text: "Update it:", command: update }],
         { text: "Update yt-dlp", url: YTDLP_DOCS });
     }
 
@@ -192,6 +238,7 @@
   }
 
   window.CTAReady = {
-    NEEDS_HOST, SUGGEST_DAYS, FORCE_DAYS, YTDLP_DOCS, commands, check
+    NEEDS_HOST, SUGGEST_BEHIND, FORCE_BEHIND, YTDLP_DOCS,
+    commands, updateCommand, releasesBehind, check
   };
 })();

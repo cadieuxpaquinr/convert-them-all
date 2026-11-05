@@ -118,6 +118,7 @@
       el.helperSteps.appendChild(item);
     }
     blocked = state.blocking;
+    el.tools.classList.toggle("gated", blocked);
     busy(false);
     link = state.link;
     el.helperLink.hidden = !link;
@@ -141,6 +142,7 @@
     el.helperSteps = document.getElementById("helper-steps");
     el.helperActions = document.getElementById("helper-actions");
     el.helperLink = document.getElementById("helper-link");
+    el.tools = document.getElementById("video-tools");
     el.selection = document.getElementById("video-selection");
     el.url = document.getElementById("video-url");
     el.detect = document.getElementById("video-detect");

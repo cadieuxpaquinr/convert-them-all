@@ -15,6 +15,8 @@ platform's wording and commands to show.
 
 import json
 import os
+import time
+import urllib.request
 import platform
 import shutil
 import signal
@@ -98,6 +100,13 @@ def first_word_after(text, marker):
 # the command line rather than asking anyone to install another one.
 JS_RUNTIMES = ("deno", "bun", "node")
 
+# Which releases exist, asked once a day. yt-dlp ships every few weeks, so
+# counting days since a release says nothing useful: being on the newest one
+# must look the same whether it came out yesterday or last month.
+RELEASES_URL = "https://api.github.com/repos/yt-dlp/yt-dlp/releases?per_page=8"
+RELEASES_TTL = 24 * 60 * 60
+RELEASES_TIMEOUT = 5
+
 
 def js_runtime():
     for name in JS_RUNTIMES:
@@ -105,6 +114,90 @@ def js_runtime():
         if found:
             return {"found": True, "name": name, "path": found}
     return {"found": False}
+
+
+def cache_file():
+    root = os.environ.get("XDG_CACHE_HOME") or (Path.home() / ".cache")
+    folder = Path(root) / "convert-them-all"
+    folder.mkdir(parents=True, exist_ok=True)
+    return folder / "releases.json"
+
+
+def read_cache():
+    try:
+        cached = json.loads(cache_file().read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    if time.time() - cached.get("checked", 0) > RELEASES_TTL:
+        return None
+    return cached
+
+
+def fetch_releases():
+    request = urllib.request.Request(
+        RELEASES_URL,
+        headers={"Accept": "application/vnd.github+json",
+                 "User-Agent": "convert-them-all"},
+    )
+    with urllib.request.urlopen(request, timeout=RELEASES_TIMEOUT) as answer:
+        body = json.loads(answer.read().decode("utf-8"))
+    tags = [entry.get("tag_name", "") for entry in body
+            if not entry.get("prerelease") and entry.get("tag_name")]
+    return [tag for tag in tags if tag]
+
+
+def releases():
+    """The known release tags, newest first. Cached, and never fatal."""
+    cached = read_cache()
+    if cached:
+        return {"tags": cached.get("tags", []), "checked": cached["checked"],
+                "fresh": False}
+    try:
+        tags = fetch_releases()
+    except Exception as error:  # noqa: BLE001 - offline is normal, not fatal
+        stale = None
+        try:
+            stale = json.loads(cache_file().read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            stale = None
+        return {"tags": (stale or {}).get("tags", []), "error": str(error),
+                "checked": (stale or {}).get("checked", 0), "fresh": False}
+    checked = time.time()
+    try:
+        cache_file().write_text(
+            json.dumps({"tags": tags, "checked": checked}), encoding="utf-8")
+    except OSError:
+        pass
+    return {"tags": tags, "checked": checked, "fresh": True}
+
+
+def install_kind(path):
+    """How yt-dlp got here, which decides how it is updated.
+
+    Guessed from where it sits and what it is, because the only certain test,
+    running the updater, would do the updating.
+    """
+    if not path:
+        return "unknown"
+    place = Path(path)
+    text = str(place)
+    home = str(Path.home())
+
+    if "homebrew" in text or text.startswith("/opt/homebrew"):
+        return "brew"
+    if (Path.home() / ".local/share/pipx/venvs/yt-dlp").is_dir():
+        return "pipx"
+    if "WinGet" in text or "winget" in text:
+        return "winget"
+    if any(Path(p).is_dir() for p in
+           Path.home().glob(".local/lib/python3*/site-packages/yt_dlp*.dist-info")):
+        return "pip"
+    if text.startswith(("/usr/bin", "/bin", "/usr/sbin")):
+        return "system"
+    if text.startswith(home):
+        # A zipapp or a standalone build, both of which update themselves.
+        return "self"
+    return "unknown"
 
 
 def downloads_folder():
@@ -131,6 +224,13 @@ def folder_state(path):
     return state
 
 
+def ytdlp_report():
+    found = tool("yt-dlp", ["--version"], lambda text: text.splitlines()[0].strip())
+    if found.get("found"):
+        found["install"] = install_kind(found.get("path"))
+    return found
+
+
 def report():
     return {
         "type": "report",
@@ -139,9 +239,10 @@ def report():
         "machine": platform.machine(),
         "python": platform.python_version(),
         "home": str(Path.home()),
-        "ytdlp": tool("yt-dlp", ["--version"], lambda text: text.splitlines()[0].strip()),
+        "ytdlp": ytdlp_report(),
         "ffmpeg": tool("ffmpeg", ["-version"], lambda text: first_word_after(text, "version")),
         "jsruntime": js_runtime(),
+        "releases": releases(),
         "downloads": folder_state(downloads_folder()),
     }
 
