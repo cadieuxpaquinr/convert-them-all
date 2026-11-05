@@ -11,6 +11,9 @@
   let placeholder = "";
   // Where the helper notice's button points, when it has one.
   let link = null;
+  // Set when the machine cannot download at all: the controls are held shut
+  // rather than left to fail in a way that looks like a fault here.
+  let blocked = false;
 
   function short(url) {
     return url.length > MAX_URL ? `${url.slice(0, MAX_URL)}…` : url;
@@ -33,9 +36,9 @@
   }
 
   function busy(on) {
-    el.url.disabled = on;
-    el.download.disabled = on;
-    el.detect.disabled = on;
+    el.url.disabled = on || blocked;
+    el.download.disabled = on || blocked;
+    el.detect.disabled = on || blocked;
     el.cancel.hidden = !on;
     el.progress.hidden = !on;
   }
@@ -114,6 +117,8 @@
       }
       el.helperSteps.appendChild(item);
     }
+    blocked = state.blocking;
+    busy(false);
     link = state.link;
     el.helperLink.hidden = !link;
     if (link) el.helperLink.textContent = link.text;

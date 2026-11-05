@@ -14,10 +14,13 @@
   // do. An out-of-date helper is then told to update instead of misbehaving.
   const NEEDS_HOST = 2;
 
-  // yt-dlp warns about itself past 90 days, and it is right to: a copy from
-  // March failed on YouTube with a bare 403 that a current one downloaded
-  // without complaint. Matching its own threshold is the honest number.
-  const STALE_DAYS = 90;
+  // yt-dlp chases sites that change under it constantly. A week old is worth
+  // mentioning; a fortnight old is not worth trusting, and a copy from March
+  // failed on YouTube with a bare 403 that a current one downloaded without
+  // complaint. Past the second number the download is refused rather than
+  // allowed to fail in a way that looks like a fault in this add-on.
+  const SUGGEST_DAYS = 7;
+  const FORCE_DAYS = 15;
 
   // The project's own page, which outlives any package name written down here.
   const YTDLP_DOCS = "https://github.com/yt-dlp/yt-dlp#installation";
@@ -62,6 +65,15 @@
     if (!match) return null;
     const released = Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
     return Math.round((today.getTime() - released) / 86400000);
+  }
+
+  // Days up to a month: rounding 14 and 16 both to "2 weeks" would make the two
+  // sides of the limit read the same, which is the one thing this must not do.
+  function days(count) {
+    if (count < 31) return `${count} days`;
+    if (count < 365) return `${Math.round(count / 30)} months`;
+    const years = count / 365;
+    return years < 1.5 ? "over a year" : `${Math.round(years)} years`;
   }
 
   function state(id, blocking, title, detail, steps, link) {
@@ -117,33 +129,15 @@
         { text: "Get yt-dlp", url: YTDLP_DOCS });
     }
 
-    const ffmpeg = report.ffmpeg || {};
-    if (!ffmpeg.found) {
-      return state("no-ffmpeg", false,
-        "Without ffmpeg, some videos cannot be saved",
-        "Sites such as YouTube send the picture and the sound separately, and ffmpeg "
-        + "is what joins them. Videos that come as a single stream still work.",
-        [{ text: "Install it:", command: how.ffmpeg }, { text: how.note }]);
-    }
-
     const age = ageInDays(ytdlp.version, now);
-    if (age !== null && age > STALE_DAYS) {
-      return state("ytdlp-stale", false,
-        `yt-dlp is ${Math.floor(age / 30)} months old`,
-        "Sites change often, and an old copy fails on them in ways that look like "
-        + "faults in this add-on.",
+    if (age !== null && age > FORCE_DAYS) {
+      return state("ytdlp-expired", true,
+        `yt-dlp is ${days(age)} old and cannot be relied on`,
+        "Sites change what they serve from week to week, and a copy this old fails "
+        + "on most of them. Downloading is held back until it is updated, because "
+        + "the failures look like faults in this add-on rather than an old program.",
         [{ text: "Update it:", command: how.update }],
         { text: "Update yt-dlp", url: YTDLP_DOCS });
-    }
-
-    const runtime = report.jsruntime || {};
-    if (!runtime.found) {
-      return state("no-jsruntime", false,
-        "Sites that scramble their links will fail",
-        "YouTube and others hide their addresses behind JavaScript, and yt-dlp needs "
-        + "a runtime to work them out. Node, Deno or Bun will do. Other sites are "
-        + "unaffected.",
-        [{ text: "Install one:", command: how.jsruntime }, { text: how.note }]);
     }
 
     const folder = report.downloads || {};
@@ -160,6 +154,36 @@
         [{ text: "Pick another one in Settings, under Downloads." }]);
     }
 
+    // Nothing is in the way from here on: what follows is worth saying, but
+    // downloading still works.
+    const ffmpeg = report.ffmpeg || {};
+    if (!ffmpeg.found) {
+      return state("no-ffmpeg", false,
+        "Without ffmpeg, some videos cannot be saved",
+        "Sites such as YouTube send the picture and the sound separately, and ffmpeg "
+        + "is what joins them. Videos that come as a single stream still work.",
+        [{ text: "Install it:", command: how.ffmpeg }, { text: how.note }]);
+    }
+
+    const runtime = report.jsruntime || {};
+    if (!runtime.found) {
+      return state("no-jsruntime", false,
+        "Sites that scramble their links will fail",
+        "YouTube and others hide their addresses behind JavaScript, and yt-dlp needs "
+        + "a runtime to work them out. Node, Deno or Bun will do. Other sites are "
+        + "unaffected.",
+        [{ text: "Install one:", command: how.jsruntime }, { text: how.note }]);
+    }
+
+    if (age !== null && age > SUGGEST_DAYS) {
+      return state("ytdlp-old", false,
+        `yt-dlp is ${days(age)} old`,
+        "Updating it now and then is what keeps downloads working, since sites "
+        + "change often. Nothing is blocked yet.",
+        [{ text: "Update it:", command: how.update }],
+        { text: "Update yt-dlp", url: YTDLP_DOCS });
+    }
+
     return state("ready", false,
       "Ready",
       `yt-dlp ${ytdlp.version}, ffmpeg ${ffmpeg.version}, ${runtime.name}. `
@@ -167,5 +191,7 @@
       []);
   }
 
-  window.CTAReady = { NEEDS_HOST, STALE_DAYS, YTDLP_DOCS, commands, check };
+  window.CTAReady = {
+    NEEDS_HOST, SUGGEST_DAYS, FORCE_DAYS, YTDLP_DOCS, commands, check
+  };
 })();
