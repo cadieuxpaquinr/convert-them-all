@@ -255,10 +255,5 @@
     load(url ? { url, name: url, label: short(url) } : null);
   }
 
-  // Said after the image is in, so it is not mistaken for a failure.
-  function note(message) {
-    setStatus(message);
-  }
-
-  window.CTAImages = { mount, set, file: loadFile, note };
+  window.CTAImages = { mount, set, file: loadFile };
 })();

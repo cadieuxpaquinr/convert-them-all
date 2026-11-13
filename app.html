@@ -118,6 +118,17 @@
     #drop-overlay > span { padding: 40px 60px; border-radius: 10px;
       background: var(--bg); border: 2px dashed var(--accent);
       color: var(--accent); font-size: 16px; }
+    .facts { margin: 0; font-size: 12px; color: var(--muted); }
+    .facts div { display: flex; gap: 8px; padding: 3px 0;
+      border-bottom: 1px solid var(--line); }
+    .facts div:last-child { border-bottom: 0; }
+    .facts dt { flex: 0 0 90px; }
+    .facts dd { margin: 0; color: var(--fg); word-break: break-all; }
+    #audio-format { min-width: 150px; padding: 4px; font: inherit; color: inherit;
+      background: var(--field-bg); border: 1px solid var(--field-border);
+      border-radius: 6px; }
+    #audio-format option { padding: 3px 6px; }
+    #audio-name { width: 100%; max-width: 220px; }
     .checklist { list-style: none; margin: 0; padding: 0; }
     .checklist li { display: flex; gap: 10px; padding: 8px 0;
       border-bottom: 1px solid var(--line); }
@@ -325,7 +336,41 @@
 
     <section id="audio" hidden>
       <h1>Audio</h1>
-      <p>PLACEHOLDER. No feature yet.</p>
+      <p id="audio-selection" class="media-selection">Open an audio file from your
+        computer, or drop one on this window.</p>
+      <div class="row">
+        <button id="pick-audio">Choose an audio file&hellip;</button>
+        <input type="file" id="audio-file" accept="audio/*" hidden>
+      </div>
+
+      <div class="columns">
+        <div>
+          <h2>The file</h2>
+          <dl id="audio-facts" class="facts"></dl>
+          <p id="audio-state" class="hint">Original</p>
+        </div>
+
+        <div>
+          <h2>Convert to</h2>
+          <select id="audio-format" size="6"></select>
+
+          <h2>Options</h2>
+          <label class="field"><span>Sample rate</span>
+            <select id="audio-rate"></select></label>
+          <label class="field"><span>Bit depth</span>
+            <select id="audio-depth"></select></label>
+
+          <h2>Name</h2>
+          <input id="audio-name" type="text" placeholder="audio">
+
+          <div class="row">
+            <button id="audio-convert" class="primary">Convert</button>
+            <button id="audio-download">Download</button>
+          </div>
+          <p class="hint">WAV holds the sound exactly as it was decoded, so the
+            file is large. Everything happens on your computer.</p>
+        </div>
+      </div>
     </section>
 
     <section id="websites" hidden>
@@ -335,7 +380,12 @@
 
     <section id="files" hidden>
       <h1>Files</h1>
-      <p>PLACEHOLDER. No feature yet.</p>
+      <p>Anything that is not an image or an audio file lands here. There is
+        nothing to convert it to yet.</p>
+      <div class="row">
+        <button id="pick-any">Choose a file&hellip;</button>
+        <input type="file" id="any-file" hidden>
+      </div>
       <p id="file-dropped" class="media-selection" hidden></p>
     </section>
 
@@ -442,11 +492,15 @@
   <script src="failures.js"></script>
   <script src="folder.js"></script>
   <script src="messages.js"></script>
+  <script src="kinds.js"></script>
+  <script src="wav.js"></script>
+  <script src="audioconvert.js"></script>
   <script src="report.js"></script>
   <script src="drop.js"></script>
   <script src="images.js"></script>
   <script src="videos.js"></script>
   <script src="files.js"></script>
+  <script src="audio.js"></script>
   <script src="home.js"></script>
   <script src="app.js"></script>
 </body>

@@ -1,13 +1,15 @@
 /*
- * The Files pane. There is no feature here yet, so all it does is own what a
- * drop leaves with it.
+ * The Files pane. There is nothing to convert a file to here yet, so all it
+ * does is take one in and say what it is holding.
  *
- * A file that is not an image has to land somewhere. Sending it here, named,
- * says the app saw it and has nothing to offer, which is better than a drop
- * that appears to do nothing at all.
+ * It is also the catch-all: a file that is neither an image nor audio lands
+ * here, named, which is better than a drop that appears to do nothing. The
+ * picker accepts anything, and what the user picks is routed by kind like
+ * everything else, so an image chosen here still reaches the Images pane.
  */
 (() => {
   const el = {};
+  let picked = null;
 
   function size(bytes) {
     if (!bytes && bytes !== 0) return "";
@@ -18,6 +20,17 @@
 
   function mount() {
     el.dropped = document.getElementById("file-dropped");
+    el.pick = document.getElementById("pick-any");
+    el.file = document.getElementById("any-file");
+
+    el.pick.addEventListener("click", () => el.file.click());
+    el.file.addEventListener("change", () => {
+      const file = el.file.files[0];
+      // Cleared so that picking the same file twice still fires a change.
+      el.file.value = "";
+      if (file && picked) picked(file, "files");
+    });
+
     el.dropped.hidden = true;
   }
 
@@ -29,9 +42,14 @@
     }
     const parts = [file.name, size(file.size), file.type].filter(Boolean);
     el.dropped.textContent =
-      `You dropped ${parts.join(", ")}. There is nothing to convert it to yet.`;
+      `You have ${parts.join(", ")}. There is nothing to convert it to yet.`;
     el.dropped.hidden = false;
   }
 
-  window.CTAFiles = { mount, set };
+  // The shell routes what is picked, because only it knows the other panes.
+  function onPick(handler) {
+    picked = handler;
+  }
+
+  window.CTAFiles = { mount, set, onPick };
 })();
