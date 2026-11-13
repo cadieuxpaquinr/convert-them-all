@@ -55,8 +55,6 @@
     dialog p { margin: 10px 0 0; }
     .link { padding: 0; border: 0; background: none; font: inherit; cursor: pointer;
       color: var(--accent); text-align: left; display: block; margin-bottom: 8px; }
-    .status { margin-top: 16px; min-height: 18px; color: var(--ok); }
-    .status.error { color: var(--error); }
     p.hint { color: var(--muted); font-size: 12px; margin-top: 10px; }
     fieldset { border: 0; margin: 0; padding: 0; }
     fieldset label { font-weight: normal; }
@@ -120,6 +118,37 @@
     #drop-overlay > span { padding: 40px 60px; border-radius: 10px;
       background: var(--bg); border: 2px dashed var(--accent);
       color: var(--accent); font-size: 16px; }
+    /* The corner. Above the panes and clear of the drop overlay, which is the
+       only other thing that covers the window. */
+    #messages { position: fixed; top: 10px; right: 14px; z-index: 20;
+      display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+    #message-bell { padding: 2px 6px; border: 0; border-radius: 6px;
+      background: none; color: var(--muted); font-size: 18px; line-height: 1;
+      cursor: pointer; }
+    #message-bell:hover { background: var(--line); color: var(--fg); }
+    #message-stack { display: flex; flex-direction: column; gap: 8px;
+      align-items: flex-end; }
+    .toast { display: flex; align-items: flex-start; gap: 10px; max-width: 320px;
+      padding: 9px 10px 9px 12px; border-radius: 6px; background: var(--panel);
+      border: 1px solid var(--line); border-left: 3px solid var(--ok);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
+    .toast[data-kind="error"] { border-left-color: var(--error); }
+    .toast .text { word-break: break-word; }
+    .toast .close { padding: 0 2px; border: 0; background: none; color: var(--muted);
+      font: inherit; font-size: 15px; line-height: 1.1; cursor: pointer; }
+    .toast .close:hover { color: var(--fg); }
+    #message-panel { width: 300px; padding: 10px 12px; border-radius: 6px;
+      background: var(--bg); border: 1px solid var(--line);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
+    #message-list { list-style: none; margin: 0; padding: 0;
+      max-height: 260px; overflow-y: auto; }
+    #message-list li { display: flex; gap: 8px; padding: 4px 0;
+      border-bottom: 1px solid var(--line); }
+    #message-list li:last-child { border-bottom: 0; }
+    #message-list li[data-kind="error"] .at { color: var(--error); }
+    #message-list li.empty { color: var(--muted); }
+    #message-list .at { flex: 0 0 auto; color: var(--muted);
+      font: 12px ui-monospace, monospace; padding-top: 1px; }
     #video-raw { max-height: 160px; overflow: auto; padding: 8px; margin: 6px 0 0;
       background: var(--field-bg); border: 1px solid var(--line); border-radius: 6px;
       font: 11px ui-monospace, monospace; white-space: pre-wrap; word-break: break-all; }
@@ -127,6 +156,18 @@
 </head>
 <body>
   <div id="drop-overlay" hidden><span>Drop an image here</span></div>
+
+  <div id="messages">
+    <button id="message-bell" type="button" title="Recent messages"
+      aria-expanded="false">&#x1F56D;</button>
+    <div id="message-panel" hidden>
+      <ul id="message-list"></ul>
+      <div class="row">
+        <button id="message-clear">Clear</button>
+      </div>
+    </div>
+    <div id="message-stack"></div>
+  </div>
 
   <nav id="sections">
     <div class="top">
@@ -183,7 +224,6 @@
             <button id="convert" class="primary">Convert</button>
             <button id="download">Download</button>
           </div>
-          <div id="image-status" class="status"></div>
           <div id="forget-site" hidden>
             <p class="hint" id="forget-text"></p>
             <div class="row">
@@ -236,7 +276,6 @@
         <button id="video-download" class="primary">Download</button>
         <button id="video-cancel" hidden>Cancel</button>
       </div>
-      <div id="video-status" class="status"></div>
       <p id="video-progress" class="hint" hidden></p>
       <details id="video-details" hidden>
         <summary>Details</summary>
@@ -326,8 +365,6 @@
         <label><input type="radio" name="theme" value="light"> Light</label>
         <label><input type="radio" name="theme" value="dark"> Dark</label>
       </fieldset>
-
-      <div id="status" class="status"></div>
     </section>
 
     <dialog id="sites-dialog">
@@ -365,6 +402,7 @@
   <script src="videoprefs.js"></script>
   <script src="failures.js"></script>
   <script src="folder.js"></script>
+  <script src="messages.js"></script>
   <script src="drop.js"></script>
   <script src="images.js"></script>
   <script src="videos.js"></script>

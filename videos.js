@@ -33,8 +33,7 @@
   }
 
   function setStatus(message, isError) {
-    el.status.textContent = message;
-    el.status.classList.toggle("error", !!isError);
+    CTAMessages.say(message, isError ? "error" : "ok");
   }
 
   function showDetails(raw) {
@@ -179,7 +178,6 @@
       return;
     }
     showDetails("");
-    setStatus("");
     busy(true);
     el.progress.textContent = "Starting…";
 
@@ -278,7 +276,6 @@
     el.detect = document.getElementById("video-detect");
     el.download = document.getElementById("video-download");
     el.cancel = document.getElementById("video-cancel");
-    el.status = document.getElementById("video-status");
     el.progress = document.getElementById("video-progress");
     el.details = document.getElementById("video-details");
     el.raw = document.getElementById("video-raw");
@@ -318,7 +315,6 @@
     const link = page || url;
     if (link) {
       el.url.value = link;
-      setStatus("");
       showDetails("");
       ask().catch(() => {});
     }

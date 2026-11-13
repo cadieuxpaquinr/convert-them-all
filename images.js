@@ -28,8 +28,7 @@
   }
 
   function setStatus(message, isError) {
-    el.status.textContent = message;
-    el.status.classList.toggle("error", !!isError);
+    CTAMessages.say(message, isError ? "error" : "ok");
   }
 
   function enable(on) {
@@ -100,7 +99,6 @@
       showPreview(src.url);
       hideForget();
       el.state.textContent = `Already ${format.label}, ready for download`;
-      setStatus("");
       return;
     }
 
@@ -118,7 +116,7 @@
       return;
     }
 
-    setStatus("Converting…");
+    el.state.textContent = "Converting…";
     hideForget();
     el.convert.disabled = true;
     try {
@@ -127,7 +125,7 @@
       showPreview(next.url);
       el.state.textContent =
         `Converted to ${format.label} · ${next.width}×${next.height} · ${size(next.size)}`;
-      setStatus("");
+      setStatus(`Converted to ${format.label}, ${size(next.size)}.`);
     } catch (e) {
       setStatus(`Could not convert: ${e.message}`, true);
     } finally {
@@ -171,7 +169,6 @@
     replaceResult(null);
     el.selection.textContent = src ? `Selected: ${src.label}` : placeholder;
     el.state.textContent = "Original";
-    setStatus("");
     hideForget();
     enable(!!src);
 
@@ -212,7 +209,6 @@
     el.name = document.getElementById("image-name");
     el.convert = document.getElementById("convert");
     el.download = document.getElementById("download");
-    el.status = document.getElementById("image-status");
     el.forget = document.getElementById("forget-site");
     el.forgetText = document.getElementById("forget-text");
     el.forgetButton = document.getElementById("forget-button");

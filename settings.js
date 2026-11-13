@@ -23,7 +23,6 @@
 
   function mount() {
     const input = document.getElementById("shortcut");
-    const status = document.getElementById("status");
     const save = document.getElementById("save");
     const checkbox = document.getElementById("disable-shortcut");
     const shortcutLabel = document.getElementById("shortcut-label");
@@ -36,8 +35,7 @@
     let pending = "";
 
     function setStatus(message, isError) {
-      status.textContent = message;
-      status.classList.toggle("error", !!isError);
+      CTAMessages.say(message, isError ? "error" : "ok");
     }
 
     function mainKey(e) {
@@ -91,7 +89,6 @@
       }
 
       show(mods.concat(key).join("+"));
-      setStatus("");
     });
 
     checkbox.addEventListener("change", async () => {

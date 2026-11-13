@@ -30,6 +30,10 @@
   // One pane that fails to mount must not take the others, nor the handover
   // below, down with it: that would leave the app sitting on its home page with
   // no sign of why.
+  // First: the panes say things while they mount, and the corner has to be
+  // there to catch them.
+  CTAMessages.mount();
+
   for (const pane of [CTASettings, CTAAbout, CTAImages, CTAVideos, CTAFiles]) {
     try {
       pane.mount();
