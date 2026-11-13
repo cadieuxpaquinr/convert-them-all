@@ -1,146 +1,159 @@
 # Convert Them All
 
-A Firefox extension that converts images, in the browser and on your computer only.
+A Firefox add-on that converts images, audio and web pages in the browser, and downloads
+videos through yt-dlp on your computer. Nothing is uploaded.
 
-Right-click an image on any page, choose **Convert to…**, pick a format, and download the
-result. Nothing is uploaded and no server is involved.
+**Not on addons.mozilla.org yet.** When it is published it will live at
+[addons.mozilla.org/firefox/addon/convert-them-all](https://addons.mozilla.org/firefox/addon/convert-them-all/).
+Until then, [install from source](#install).
 
-> **Early version.** Only the Images section works. Videos, Audio, Websites and Files are
-> placeholders, and AVIF and GIF are listed as COMING SOON because they have no offline
-> encoder yet. See [Limitations](#limitations).
+## Features
 
-## Formats
+Open the app with the toolbar button, with `Ctrl+1` (`Alt+1` on Windows, `⌃1` on macOS),
+or by right-clicking an image or a video and choosing **Download / Convert to…**. Drop a
+file anywhere on the window and it goes to the section that handles it.
 
-| To | Works | How |
-|---|---|---|
-| PNG | yes | Firefox's canvas |
-| JPEG | yes | Firefox's canvas, transparency filled white |
-| WEBP | yes | Firefox's canvas |
-| BMP | yes | Firefox's canvas, transparency filled white |
-| ICO | yes | a PNG in an ICO container, scaled to 256 px at most |
-| AVIF | not yet | needs an AV1 encoder that Firefox does not have |
-| GIF | not yet | needs a colour quantiser and an LZW encoder |
+### Images
 
-Firefox's canvas quietly returns PNG for a format it cannot write. The add-on checks what
-it got back and refuses rather than save PNG bytes under a foreign extension, so a file
-never lies about what it holds.
+Right-click any image, or pick one from your computer.
 
-## Usage
+| To | Works |
+|---|---|
+| PNG, JPEG, WEBP, BMP | yes, with Firefox's canvas |
+| ICO | yes, a PNG in an ICO container, 256 px at most |
+| AVIF, GIF | not yet, no offline encoder exists for them |
 
-1. Right-click an image on a page and choose **Convert to…** at the end of the menu. The
-   app opens on its Images section with that image loaded. You can also open the app with
-   the toolbar button or the keyboard shortcut, then work from there.
+Firefox's canvas quietly returns PNG for a format it cannot write, so the add-on checks
+what it got back rather than save PNG bytes under a foreign extension.
 
-   | Platform | Default shortcut |
-   |---|---|
-   | Linux | `Ctrl+1` |
-   | Windows | `Alt+1` |
-   | macOS | `Control+1`, shown as `⌃1` |
+### Videos
 
-2. Pick a format. The list starts on the format the image already is.
-3. Change the name if you want. It starts from the image's own file name.
-4. Press **Convert**. The preview switches to the result. Picking the format the image
-   already is costs nothing: no permission, no download and no re-encoding.
-5. Press **Download**. Before a conversion this saves the original file with its own
-   extension; after one it saves the converted file.
+Paste a link, detect the one on the page in front, or right-click a video. Downloading is
+done by [yt-dlp](https://github.com/yt-dlp/yt-dlp) through a small helper outside the
+browser, because an add-on cannot run a program itself.
 
-## Settings
+- **webm** best quality, with a resolution, frame rate and codec to choose
+- **mp4** either repackaged without re-encoding, or forced to H.264 for players that need it
+- **mp3** audio only, with a bitrate, and the video kept as well if you want
+- Skip sponsored segments, through [SponsorBlock](https://sponsor.ajay.app). YouTube only,
+  and off by default.
 
-The app's own `⚙ Settings` section, also reachable from the Add-ons page.
+The pane checks what the machine can do and says exactly what to install. yt-dlp one
+release behind is a warning; two behind holds video downloads shut, because a copy that
+old fails on many sites in ways that look like a fault here.
 
-- **Shortcut**: change the key combination, or turn it off.
-- **Window**: the size and position the app opens at. **Use current** stores the window as
-  it sits now. Leave X and Y empty to centre it.
-- **Conversions**: give permission one time instead of once for each new site.
-- **Theme**: follow the system light or dark theme, or force one of them.
+### Audio
+
+Pick an audio file, or drop one. Firefox decodes mp3, wav, flac, ogg, opus, m4a and webm.
+
+| To | Works |
+|---|---|
+| WAV | yes, with a sample rate and 16, 24 or 32-bit to choose |
+| MP3, OGG, OPUS, FLAC, M4A | not yet |
+
+A browser has no audio encoder but MediaRecorder, which writes Opus alone and in real
+time. WAV is written from the decoded samples instead, which is instant and exact.
+
+### Websites
+
+Beta. Paste an address or detect the page in front, and save it as a **single
+self-contained HTML file**, **as the server sent it**, as **plain text** or as
+**Markdown**. Scripts are always removed.
+
+Reach is bounded twice. A whole site is a section, not a host, so you choose how far up
+the path to go:
+
+```
+https://docs.nvidia.com/jetson/archives/r39.2/DeveloperGuide/SD/Kernel/RealTimeKernel.html
+                                             ^ or here      ^ or here  ^ default
+```
+
+Nothing outside that folder is followed, a page count stops the crawl, and the widest
+reach asks before it starts. Pages land under `Downloads/convert-them-all/<site>/`, and
+links between saved pages are rewritten so the copy can be read offline.
+
+### Files
+
+Anything that is not an image or an audio file lands here, named. Nothing converts it yet.
+
+### Everywhere
+
+- **Messages** in the top right, dismissable, gone after fifteen seconds, with a bell that
+  keeps the last ten.
+- **A home page that sets the app up**: what is installed, what to install, and the
+  optional all-sites permission, which can be given there and taken back in Settings.
+- **Settings** for the shortcut, the app window's size and position, the download folder
+  and the theme.
 
 ## Install
 
-The add-on is not on addons.mozilla.org yet.
-
-### From source
+The add-on is not published yet, so load it from source:
 
 1. Open `about:debugging` in Firefox.
-2. Choose "This Firefox", then "Load Temporary Add-on".
-3. Select the `manifest.json` file in this folder.
+2. Choose **This Firefox**, then **Load Temporary Add-on**.
+3. Select `manifest.json` in this folder.
 
 Firefox removes a temporary add-on when it closes.
 
+**For video downloads only**, install the helper and its dependencies:
+
+```sh
+./host/install.sh                                              # Linux and macOS
+powershell -ExecutionPolicy Bypass -File host\install.ps1      # Windows
+```
+
+The helper needs Python, yt-dlp, and ffmpeg for sites that send picture and sound
+separately. The app's home page names the exact command for your system. A Firefox
+installed as a snap cannot reach programs outside its confinement, so the helper will not
+work there.
+
 ## Permissions
 
-At install:
+At install: `menus`, `downloads`, `storage`, `tabs` for reading the address of the page in
+front, and `nativeMessaging` for the video helper.
 
-- `menus`: put **Convert to…** on the image context menu.
-- `downloads`: save the converted file.
-- `storage`: remember the theme, the window size, and the width of the section list.
-
-Asked for later, only when a conversion needs it:
-
-- host access to one site, for example `https://cdn.example.com/*`. Converting an image
-  means reading its bytes, and an image from another site taints the canvas, so the add-on
-  has to fetch it instead. One site is asked for at a time, and Firefox remembers it.
-
-You can give access to every site at once in Settings, and take it back there. The dialog
-that appears also offers to drop the single sites you allowed before. After a download,
-the Images section offers to drop the access that download used.
+Asked for later, only when something needs it: access to a site, because reading an
+image's bytes or a page's HTML means fetching it. One site at a time, or all sites at
+once from the home page or Settings.
 
 ## Privacy
 
-No data collection. Every conversion runs in your browser with Firefox's own encoders.
-The add-on makes no network request of its own except fetching the image you picked, from
-the site it is already on.
+Every conversion runs on your computer. Images, audio and page conversion never leave the
+browser, and the add-on has no analytics of any kind.
 
-## Limitations
+It does make these requests, and no others:
 
-- AVIF and GIF cannot be written yet. They stay in the list, greyed out, rather than
-  silently producing a PNG under the wrong name.
-- ICO is limited to 256 px a side by the format itself. Larger images are scaled down and
-  keep their aspect ratio.
-- JPEG and BMP have no alpha channel, so transparency is filled with white rather than
-  left black.
-- JPEG and WEBP quality is fixed at 0.92.
-- On Wayland a window is never told where it is, and cannot place itself. X and Y have no
-  effect there, and **Use current** says so and keeps the size alone. X11, Windows and
-  macOS are not affected.
-- Firefox will not let an extension open `about:addons`, so permissions are managed inside
-  the app rather than by linking to Firefox's own page.
-
-## Development
-
-There is no build step, no bundler and no dependencies. Every file is shipped as written.
-
-Each piece of work lives in its own module, so a backend can be swapped without touching
-the callers:
-
-| File | Holds |
-|---|---|
-| `app.js`, `app.html` | the app shell and which section is visible |
-| `convert.js` | the format table, file naming, and the conversion |
-| `ico.js` | the ICO container |
-| `access.js` | every host permission question |
-| `images.js` | the Images section |
-| `settings.js`, `geometry.js`, `shortcut.js`, `platform.js`, `theme.js` | Settings and what it stores |
-| `background.js` | the context menu, the app window, and opening links |
-
-Checks:
-
-```sh
-npx web-ext lint --source-dir .     # 0 errors expected
-node --check <file>.js              # syntax
-```
-
-The behaviour is covered by harness pages that load the real modules against a stubbed
-`browser` object and print their results with `dump()`. Screenshots cannot be used for
-this: anything that finishes after the page's load event, which includes every
-`canvas.toBlob`, is missed by a headless screenshot.
-
-## Report a bug
-
-Please [open an issue on GitHub](https://github.com/cadieuxpaquinr/convert-them-all/issues).
+- the image, page or video you asked for, from the site it is on
+- the yt-dlp release list from `api.github.com`, to tell you whether yours is current
+- when the SponsorBlock tick is on, the first four characters of a hash of the YouTube
+  video's id, to `sponsor.ajay.app`. yt-dlp does this, the video id is never sent whole,
+  and the tick is off by default.
 
 ## Roadmap
 
-- An offline encoder for AVIF and GIF.
-- The Videos, Audio, Websites and Files sections.
-- This add-on targets Firefox only. There is no intention of porting it to Chrome, Edge,
-  Safari, or any other browser.
+- AVIF and GIF for images, and MP3, OGG, OPUS, FLAC and M4A for audio, through the helper
+  and ffmpeg rather than a browser encoder that does not exist.
+- PDF for web pages.
+- Something to do with a file in the Files section.
+- Chapters for video downloads: embed, split or remove.
+- Firefox only. There is no intention of porting this to Chrome, Edge, Safari or anything
+  else.
+
+## Development
+
+No build step, no bundler and no dependencies. Every file ships as written, one module per
+job, each exposing a single `CTA*` global.
+
+```sh
+npx web-ext lint --source-dir .     # 0 errors expected
+./dev/firefox.sh                    # run it in a Firefox of its own
+./dev/sync-harness.py               # rebuild the test pages after any change
+```
+
+The pure modules are checked with node. The rest run in harness pages that load the real
+modules against a stubbed `browser` object and report with `dump()`: screenshots miss
+anything that finishes after the load event, which is every conversion.
+
+## Report a bug
+
+Please [open an issue](https://github.com/cadieuxpaquinr/convert-them-all/issues).
