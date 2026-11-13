@@ -189,6 +189,7 @@ dev/                   tooling, never packaged
 ```sh
 ./dev/check.sh                      # the node checks, for the pure modules
 ./dev/sync-harness.py               # rebuild the test pages after any change
+./dev/run-harness.sh                # run every test page headless
 ./dev/firefox.sh                    # run it in a Firefox of its own
 npx web-ext lint --source-dir .     # 0 errors expected
 ```

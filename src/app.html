@@ -71,6 +71,24 @@
     .columns h2 { margin-top: 0; }
     .columns > div + div h2 { margin-top: 14px; }
     .columns > div + div > h2:first-child { margin-top: 0; }
+    /* The crop box sits over the picture, so the box has to be the thing the
+       pointer is measured against. */
+    #preview-box { position: relative; touch-action: none; }
+    #preview-box.croppable { cursor: crosshair; }
+    /* A press on a picture is a drag of that picture, and it takes the pointer
+       with it mid-crop. The preview is never dragged anywhere: it is already
+       in the app. */
+    #preview-box img { -moz-user-select: none; user-select: none; }
+    .row button[aria-pressed="true"] { background: var(--accent);
+      color: var(--accent-fg); }
+    #crop-box { position: absolute; border: 1px dashed var(--accent);
+      background: rgba(67, 97, 238, 0.12); box-sizing: border-box; }
+    #crop-box .grip { position: absolute; width: 10px; height: 10px;
+      background: var(--accent); border-radius: 2px; }
+    #crop-box .grip[data-grip="nw"] { left: -5px; top: -5px; cursor: nwse-resize; }
+    #crop-box .grip[data-grip="ne"] { right: -5px; top: -5px; cursor: nesw-resize; }
+    #crop-box .grip[data-grip="sw"] { left: -5px; bottom: -5px; cursor: nesw-resize; }
+    #crop-box .grip[data-grip="se"] { right: -5px; bottom: -5px; cursor: nwse-resize; }
     .preview-box { width: 260px; height: 200px; box-sizing: border-box;
       display: flex; align-items: center; justify-content: center; overflow: hidden;
       background: var(--panel); border: 1px solid var(--line); border-radius: 6px; }
@@ -273,16 +291,47 @@
       <div class="columns">
         <div>
           <h2>Preview</h2>
-          <div class="preview-box">
+          <div class="preview-box" id="preview-box">
             <img id="image-preview" alt="">
             <span id="preview-missing" class="preview-missing" hidden>Preview unavailable</span>
+            <div id="crop-box" hidden>
+              <span class="grip" data-grip="nw"></span>
+              <span class="grip" data-grip="ne"></span>
+              <span class="grip" data-grip="sw"></span>
+              <span class="grip" data-grip="se"></span>
+            </div>
           </div>
           <p id="preview-state" class="hint">Original</p>
+          <p id="crop-hint" class="hint">Drag on the picture to crop it.</p>
         </div>
 
         <div>
           <h2>Convert to</h2>
           <select id="format" size="6"></select>
+
+          <h2>Size</h2>
+          <div class="fields">
+            <label>Width <input id="size-width" type="number" min="1" placeholder="auto"></label>
+            <label>Height <input id="size-height" type="number" min="1" placeholder="auto"></label>
+          </div>
+          <label class="check"><input type="checkbox" id="size-lock" checked>
+            <span>Keep the shape</span></label>
+
+          <h2>Crop</h2>
+          <div class="row">
+            <button id="crop-toggle" aria-pressed="false">Start cropping</button>
+            <button id="crop-clear">Clear crop</button>
+          </div>
+          <div class="fields">
+            <label>X <input id="crop-x" type="number" min="0" placeholder="0"></label>
+            <label>Y <input id="crop-y" type="number" min="0" placeholder="0"></label>
+            <label>W <input id="crop-w" type="number" min="1" placeholder="all"></label>
+            <label>H <input id="crop-h" type="number" min="1" placeholder="all"></label>
+          </div>
+
+          <h2>Metadata</h2>
+          <label class="check"><input type="checkbox" id="strip-meta">
+            <span id="strip-label">Remove metadata</span></label>
 
           <h2>Name</h2>
           <input id="image-name" type="text" placeholder="image">
@@ -566,6 +615,7 @@
   <script src="platform/access.js"></script>
   <script src="formats/ico.js"></script>
   <script src="formats/convert.js"></script>
+  <script src="formats/jpegmeta.js"></script>
   <script src="platform/native.js"></script>
   <script src="platform/readiness.js"></script>
   <script src="formats/videoformat.js"></script>
