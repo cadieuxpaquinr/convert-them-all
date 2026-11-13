@@ -118,6 +118,23 @@
     #drop-overlay > span { padding: 40px 60px; border-radius: 10px;
       background: var(--bg); border: 2px dashed var(--accent);
       color: var(--accent); font-size: 16px; }
+    #site-url { width: 100%; max-width: 560px; }
+    #site-format { min-width: 170px; padding: 4px; font: inherit; color: inherit;
+      background: var(--field-bg); border: 1px solid var(--field-border);
+      border-radius: 6px; }
+    #site-format option { padding: 3px 6px; }
+    #site-prefix { width: 100%; max-width: 420px; padding: 5px; font: inherit;
+      color: inherit; background: var(--field-bg);
+      border: 1px solid var(--field-border); border-radius: 6px; }
+    #site-limit { width: 80px; }
+    #site-scopes label { display: flex; align-items: center; gap: 8px;
+      margin-bottom: 6px; }
+    #site-scopes input { margin: 0; accent-color: var(--accent); }
+    #site-scopes .why { color: var(--muted); font-size: 12px; }
+    #site-details { margin-top: 10px; color: var(--muted); font-size: 12px; }
+    #site-saved { max-height: 180px; overflow: auto; padding: 8px; margin: 6px 0 0;
+      background: var(--field-bg); border: 1px solid var(--line); border-radius: 6px;
+      font: 11px ui-monospace, monospace; white-space: pre-wrap; word-break: break-all; }
     .facts { margin: 0; font-size: 12px; color: var(--muted); }
     .facts div { display: flex; gap: 8px; padding: 3px 0;
       border-bottom: 1px solid var(--line); }
@@ -375,7 +392,56 @@
 
     <section id="websites" hidden>
       <h1>Websites</h1>
-      <p>PLACEHOLDER. No feature yet.</p>
+
+      <div class="notice warn">
+        <p><strong>BETA.</strong> A saved page is a copy, not the site. Pages
+          that build themselves as you read them will come out incomplete, and
+          scripts are removed on purpose.</p>
+        <p class="hint">Saving the one page you need is what works best. The
+          wider the reach, the longer it takes and the more there is to go
+          wrong.</p>
+      </div>
+
+      <p id="site-selection" class="media-selection">Paste a page address, or
+        detect the one you are reading.</p>
+      <input id="site-url" type="text" spellcheck="false"
+        placeholder="https://example.com/guide/page.html">
+      <div class="row">
+        <button id="site-detect">Detect current page</button>
+        <button id="site-save" class="primary">Save</button>
+        <button id="site-cancel" hidden>Cancel</button>
+      </div>
+
+      <div class="columns">
+        <div>
+          <h2>Convert to</h2>
+          <select id="site-format" size="5"></select>
+        </div>
+
+        <div>
+          <h2>How much</h2>
+          <fieldset id="site-scopes"></fieldset>
+
+          <div id="site-reach" hidden>
+            <h2>Up to</h2>
+            <select id="site-prefix"></select>
+            <p class="hint">Only addresses under this are followed. A whole site
+              is a section, not a host.</p>
+            <label class="field"><span>Stop after</span>
+              <input id="site-limit" type="number" min="1" max="2000" value="50">
+              <span>pages</span></label>
+          </div>
+        </div>
+      </div>
+
+      <p id="site-progress" class="hint" hidden></p>
+      <details id="site-details" hidden>
+        <summary>What was saved</summary>
+        <pre id="site-saved"></pre>
+      </details>
+      <p class="hint">Pages are saved under Downloads, in a folder named after
+        the site. This is Firefox's download folder, not the one in Settings,
+        which belongs to video downloads.</p>
     </section>
 
     <section id="files" hidden>
@@ -456,6 +522,21 @@
       </fieldset>
     </section>
 
+    <dialog id="site-warning">
+      <h2>Save the whole section?</h2>
+      <p class="shout">THIS CAN TAKE A LONG TIME</p>
+      <p id="site-warning-what" class="hint"></p>
+      <p class="hint">Every page under that address is fetched one at a time
+        from someone else's server. Hundreds of pages means hundreds of
+        requests, and several minutes.</p>
+      <p class="hint"><strong>Saving only the page you need is recommended.</strong>
+        It is instant, and it is what most people want.</p>
+      <div class="row">
+        <button id="site-warning-no">Just this page</button>
+        <button id="site-warning-yes" class="danger">Save the whole section</button>
+      </div>
+    </dialog>
+
     <dialog id="sites-dialog">
       <h2>Permission removed <span class="ok">successfully</span></h2>
       <p>Conversions no longer have access to every site.</p>
@@ -499,8 +580,13 @@
   <script src="drop.js"></script>
   <script src="images.js"></script>
   <script src="videos.js"></script>
+  <script src="sitepath.js"></script>
+  <script src="crawl.js"></script>
+  <script src="markdown.js"></script>
+  <script src="webconvert.js"></script>
   <script src="files.js"></script>
   <script src="audio.js"></script>
+  <script src="websites.js"></script>
   <script src="home.js"></script>
   <script src="app.js"></script>
 </body>

@@ -44,7 +44,7 @@
   // below, down with it: that would leave the app sitting on its home page with
   // no sign of why.
   for (const pane of [CTASettings, CTAAbout, CTAImages, CTAVideos, CTAFiles,
-    CTAAudio, CTAHome]) {
+    CTAAudio, CTAWebsites, CTAHome]) {
     try {
       pane.mount();
     } catch (e) {
