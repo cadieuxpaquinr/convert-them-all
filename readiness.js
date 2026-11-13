@@ -28,8 +28,9 @@
   // Only when the release list could not be fetched: a guess, and never a block.
   const BLIND_SUGGEST_DAYS = 90;
 
-  // The project's own page, which outlives any package name written down here.
+  // The projects' own pages, which outlive any package name written down here.
   const YTDLP_DOCS = "https://github.com/yt-dlp/yt-dlp#installation";
+  const FFMPEG_DOCS = "https://ffmpeg.org/download.html";
 
   const COMMANDS = {
     linux: {
@@ -240,8 +241,98 @@
       []);
   }
 
+  // The same report, read one program at a time, for the home page's list.
+  // check() answers "can this machine download", which is one state and one
+  // fix; this answers "what is installed", which is a row each and stays on
+  // screen whether or not anything is wrong.
+  function row(id, name, mark, detail, command, link) {
+    return { id, name, mark, detail, command: command || "", link: link || null };
+  }
+
+  // Nothing can be detected through a helper that is absent or too old, and
+  // guessing would be worse than saying so.
+  function helperUsable(report) {
+    return !!report && report.type !== "error"
+      && typeof report.host === "number" && report.host >= NEEDS_HOST;
+  }
+
+  function ytdlpRow(report, os) {
+    const how = commands(os);
+    const ytdlp = report.ytdlp || {};
+    const get = { text: "Get yt-dlp", url: YTDLP_DOCS };
+    const later = { text: "Update yt-dlp", url: YTDLP_DOCS };
+
+    if (!ytdlp.found) {
+      return row("ytdlp", "yt-dlp", "bad",
+        "Not found. It is what reads a video out of a web page, and video "
+        + "downloads need it.", how.ytdlp, get);
+    }
+    if (ytdlp.broken) {
+      return row("ytdlp", "yt-dlp", "bad",
+        `Installed but will not run. ${ytdlp.broken}`, how.ytdlp, get);
+    }
+
+    const tags = (report.releases || {}).tags || [];
+    const behind = releasesBehind(ytdlp.version, tags);
+    const update = updateCommand(ytdlp.install, os);
+
+    if (behind !== null && behind >= FORCE_BEHIND) {
+      return row("ytdlp", "yt-dlp", "bad",
+        `${ytdlp.version}, ${behind} releases behind. ${tags[0]} is out, and a `
+        + "copy this far behind fails on many sites. Video downloads stay shut "
+        + "until it is updated.", update, later);
+    }
+    if (behind !== null && behind >= SUGGEST_BEHIND) {
+      return row("ytdlp", "yt-dlp", "old",
+        `${ytdlp.version}, one release behind. It still works, and ${tags[0]} is `
+        + "out. Some sites may need the newer one.", update, later);
+    }
+
+    const age = ageInDays(ytdlp.version, new Date());
+    if (behind === null && age !== null && age > BLIND_SUGGEST_DAYS) {
+      return row("ytdlp", "yt-dlp", "old",
+        `${ytdlp.version}, ${days(age)} old. The release list could not be `
+        + "fetched, so whether a newer one is out is unknown.", update, later);
+    }
+    if (behind === null) {
+      return row("ytdlp", "yt-dlp", "ok", `${ytdlp.version}.`);
+    }
+    return row("ytdlp", "yt-dlp", "ok", `${ytdlp.version}, current.`);
+  }
+
+  function ffmpegRow(report, os) {
+    const ffmpeg = report.ffmpeg || {};
+    if (ffmpeg.found) {
+      return row("ffmpeg", "ffmpeg", "ok", `${ffmpeg.version}.`);
+    }
+    // Missing ffmpeg costs some videos, not all of them, so the row warns
+    // rather than refusing.
+    return row("ffmpeg", "ffmpeg", "old",
+      "Not found. Sites such as YouTube send the picture and the sound "
+      + "separately, and ffmpeg is what joins them. Videos that come as one "
+      + "stream still work without it.",
+      commands(os).ffmpeg, { text: "Get ffmpeg", url: FFMPEG_DOCS });
+  }
+
+  function tools(report, os) {
+    const how = commands(os);
+    if (!helperUsable(report)) {
+      const why = report
+        ? "The helper is out of date, so nothing can be detected."
+        : "The helper is not installed, so nothing can be detected.";
+      return {
+        rows: [
+          row("ytdlp", "yt-dlp", "unknown", "Cannot tell yet."),
+          row("ffmpeg", "ffmpeg", "unknown", "Cannot tell yet.")
+        ],
+        helper: { text: why, command: how.helper, note: how.note }
+      };
+    }
+    return { rows: [ytdlpRow(report, os), ffmpegRow(report, os)], helper: null };
+  }
+
   window.CTAReady = {
-    NEEDS_HOST, SUGGEST_BEHIND, FORCE_BEHIND, YTDLP_DOCS,
-    commands, updateCommand, releasesBehind, check
+    NEEDS_HOST, SUGGEST_BEHIND, FORCE_BEHIND, YTDLP_DOCS, FFMPEG_DOCS,
+    commands, updateCommand, releasesBehind, check, tools
   };
 })();

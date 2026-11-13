@@ -254,13 +254,27 @@
     el.helperActions.hidden = state.ready;
   }
 
-  async function refresh() {
+  async function paint(report) {
+    await CTAPlatform.ready.catch(() => {});
+    paintHelper(CTAReady.check(report, CTAPlatform.os()));
+  }
+
+  function waiting() {
     el.helperTitle.textContent = "Checking what this computer can do…";
     el.helperDetail.textContent = "";
     el.helperSteps.textContent = "";
-    const report = await CTANative.ping();
-    await CTAPlatform.ready.catch(() => {});
-    paintHelper(CTAReady.check(report, CTAPlatform.os()));
+  }
+
+  // The shared report: the home page asks the same question, and the helper
+  // should not be started twice to answer it.
+  async function refresh() {
+    waiting();
+    await paint(await CTAReport.get());
+  }
+
+  async function recheck() {
+    waiting();
+    await paint(await CTAReport.refresh());
   }
 
   function mount() {
@@ -287,7 +301,10 @@
     placeholder = el.selection.textContent;
 
     document.getElementById("helper-recheck")
-      .addEventListener("click", () => refresh().catch(() => {}));
+      .addEventListener("click", () => recheck().catch(() => {}));
+    // Checked again from the home page: this pane follows, rather than keeping
+    // an answer the user has just acted on.
+    CTAReport.onChange((report) => paint(report).catch(() => {}));
     // The background places the tab in a normal window: this one is a popup.
     el.helperLink.addEventListener("click", () => {
       if (link) {

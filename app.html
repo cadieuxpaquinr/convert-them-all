@@ -118,6 +118,21 @@
     #drop-overlay > span { padding: 40px 60px; border-radius: 10px;
       background: var(--bg); border: 2px dashed var(--accent);
       color: var(--accent); font-size: 16px; }
+    .checklist { list-style: none; margin: 0; padding: 0; }
+    .checklist li { display: flex; gap: 10px; padding: 8px 0;
+      border-bottom: 1px solid var(--line); }
+    .checklist li:last-child { border-bottom: 0; }
+    .checklist .mark { flex: 0 0 1.2em; font-size: 15px; line-height: 1.4; }
+    .checklist .mark[data-mark="ok"] { color: var(--ok); }
+    .checklist .mark[data-mark="old"] { color: var(--accent); }
+    .checklist .mark[data-mark="bad"] { color: var(--error); }
+    .checklist .mark[data-mark="unknown"] { color: var(--muted); }
+    .checklist .what { min-width: 0; flex: 1; }
+    .checklist .name { font-weight: 600; }
+    .checklist .detail { margin: 2px 0 0; color: var(--muted); font-size: 12px; }
+    .checklist code { display: block; margin-top: 5px; padding: 5px 7px;
+      border-radius: 4px; background: var(--field-bg); border: 1px solid var(--line);
+      font: 12px ui-monospace, monospace; user-select: all; word-break: break-all; }
     /* The corner. Above the panes and clear of the drop overlay, which is the
        only other thing that covers the window. */
     #messages { position: fixed; top: 10px; right: 14px; z-index: 20;
@@ -191,6 +206,30 @@
     <!-- Shown when the app opens, and not listed in the sidebar. -->
     <section id="home">
       <h1>Convert Them All</h1>
+      <p>Images are converted by the browser itself. Videos are downloaded by
+        two programs on your computer, which are free and installed once.</p>
+
+      <h2>Video downloads</h2>
+      <ul id="home-tools" class="checklist"></ul>
+      <p id="home-helper" class="hint" hidden></p>
+      <div class="row">
+        <button id="home-recheck">Check again</button>
+      </div>
+
+      <h2>Permissions</h2>
+      <ul class="checklist">
+        <li id="home-access">
+          <span class="mark" data-mark="unknown">&#9675;</span>
+          <div class="what">
+            <span class="name">All sites</span>
+            <p class="detail" id="access-detail"></p>
+            <div class="row" id="access-actions">
+              <button id="access-allow">Allow on all sites</button>
+            </div>
+          </div>
+        </li>
+      </ul>
+
       <p>Pick a section on the left.</p>
     </section>
 
@@ -403,10 +442,12 @@
   <script src="failures.js"></script>
   <script src="folder.js"></script>
   <script src="messages.js"></script>
+  <script src="report.js"></script>
   <script src="drop.js"></script>
   <script src="images.js"></script>
   <script src="videos.js"></script>
   <script src="files.js"></script>
+  <script src="home.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
