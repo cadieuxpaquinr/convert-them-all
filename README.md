@@ -74,7 +74,8 @@ links between saved pages are rewritten so the copy can be read offline.
 
 ### Files
 
-Anything that is not an image or an audio file lands here, named. Nothing converts it yet.
+Anything that is not an image or an audio file lands here, named. Nothing converts it
+yet: archives and spreadsheets are what this section is waiting for.
 
 ### Everywhere
 
@@ -131,11 +132,42 @@ It does make these requests, and no others:
 
 ## Roadmap
 
-- AVIF and GIF for images, and MP3, OGG, OPUS, FLAC and M4A for audio, through the helper
-  and ffmpeg rather than a browser encoder that does not exist.
-- PDF for web pages.
-- Something to do with a file in the Files section.
-- Chapters for video downloads: embed, split or remove.
+The add-on is called Convert Them All, so the list is long on purpose. It is grouped by
+what each item is waiting on rather than by subject, because that is what decides how far
+off it is.
+
+**The browser can already do these**
+
+- **Archives**: zip and tar.gz, made and read. Firefox does deflate and gzip itself
+  through `CompressionStream`, measured and exact, so only the container has to be
+  written.
+- **Zip a saved website** instead of a tree of folders, which is the same writer pointed
+  at the Websites pane.
+- **Sheets**: xlsx and ods to csv, and back. Both are a zip full of XML, so they ride on
+  the archive reader and the parser the Websites pane already uses.
+- **PDF out**: images to a PDF, and a saved page to a PDF.
+- **Documents**: Markdown, HTML and docx between each other, and a saved website section
+  as one EPUB. docx and EPUB are a zip full of XML as well.
+- **Batch, and whole pages**: convert many files in one go, drop a folder, and a
+  "Convert every image on this page" entry on the context menu. This is a change to how
+  the app works rather than another format, and it is the one that earns the name.
+- **Images, deeper**: resize, crop, strip EXIF, and SVG to PNG.
+
+**These need the helper and ffmpeg**
+
+- AVIF and GIF for images, and MP3, OGG, OPUS, FLAC and M4A for audio. No browser has an
+  encoder for any of them, and none is coming.
+- Media already on your disk: pull the audio out of a video, cut a GIF from a clip,
+  re-encode a file without downloading anything.
+- Chapters for video downloads: embed them, split on them, or remove them.
+
+**This one needs a library carried along**
+
+- Reading a PDF, to get the text or the images back out. Firefox ships pdf.js and does
+  not lend it to add-ons, so it would mean shipping a copy.
+
+**Not planned**
+
 - Firefox only. There is no intention of porting this to Chrome, Edge, Safari or anything
   else.
 
