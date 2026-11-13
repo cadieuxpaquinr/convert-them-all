@@ -84,8 +84,9 @@ https://docs.nvidia.com/jetson/archives/r39.2/DeveloperGuide/SD/Kernel/RealTimeK
 ```
 
 Nothing outside that folder is followed, a page count stops the crawl, and the widest
-reach asks before it starts. Pages land under `Downloads/convert-them-all/<site>/`, and
-links between saved pages are rewritten so the copy can be read offline.
+reach asks before it starts. Pages land under `Downloads/convert-them-all/<site>/`, or
+in **one .zip** if you would rather, and links between saved pages are rewritten so the
+copy can be read offline either way.
 
 ### Files
 
@@ -153,8 +154,6 @@ off it is.
 
 **The browser can already do these**
 
-- **Zip a saved website** instead of a tree of folders, which is the same writer pointed
-  at the Websites pane.
 - **Sheets**: xlsx and ods to csv, and back. Both are a zip full of XML, so they ride on
   the archive reader and the parser the Websites pane already uses.
 - **Documents**: Markdown, HTML and docx between each other, and a saved website section

@@ -23,9 +23,18 @@
   let planned = new Map();
   // What really landed, for the list the pane shows.
   let saved = [];
+  // When the whole run is going into one archive, the pages are held here
+  // until the end instead of being written one at a time.
+  let packing = null;
   // The address Firefox has in front of the user, which is the only thing its
   // own printer can turn into a PDF.
   let inFront = "";
+
+  function size(bytes) {
+    if (bytes < 1024) return `${bytes} B`;
+    const kb = bytes / 1024;
+    return kb < 1024 ? `${Math.round(kb)} kB` : `${(kb / 1024).toFixed(1)} MB`;
+  }
 
   function setProgress(text) {
     el.progress.textContent = text || "";
@@ -166,6 +175,13 @@
       onStep: (what) => setProgress(`${order}, ${what}…`)
     });
     const path = pathFor(url, target);
+    if (packing) {
+      // Held, not written. The names are the same paths the links were
+      // rewritten to, so the archive browses exactly as the folder would.
+      packing.push({ name: path.slice(`${CTASitePath.ROOT}/`.length),
+        bytes: new Uint8Array(await blob.arrayBuffer()) });
+      return path;
+    }
     const objectUrl = URL.createObjectURL(blob);
     try {
       await browser.downloads.download({
@@ -177,6 +193,25 @@
       setTimeout(() => URL.revokeObjectURL(objectUrl), 60000);
     }
     return path;
+  }
+
+  // One archive for the whole run, named after the site and the section it
+  // came from, so two crawls of the same host do not overwrite each other.
+  async function writeArchive(start) {
+    const parts = CTASitePath.parts(start);
+    const stem = [parts.host, ...parts.folders].join("-") || "website";
+    const name = CTAConvert.fileName(stem, "zip");
+    const blob = await CTAZip.write(packing);
+    const url = URL.createObjectURL(blob);
+    try {
+      await browser.downloads.download({
+        url, filename: `${CTASitePath.ROOT}/${name}`, saveAs: false,
+        conflictAction: "overwrite"
+      });
+    } finally {
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+    }
+    return { name, size: blob.size };
   }
 
   async function run(start, target) {
@@ -297,14 +332,25 @@
     stop = null;
     planned = new Map();
     saved = [];
+    packing = el.output.value === "zip" ? [] : null;
     showSaved();
     busy(true);
     try {
       const result = await run(url, target);
       if (result.stopped) CTAMessages.say(result.stopped, result.stopped !== "Stopped.");
-      CTAMessages.say(result.done === 1
-        ? `Saved 1 page under Downloads/${CTASitePath.ROOT}.`
-        : `Saved ${result.done} pages under Downloads/${CTASitePath.ROOT}.`);
+      if (packing && packing.length) {
+        setProgress("Packing…");
+        const archive = await writeArchive(url);
+        CTAMessages.say(`Saved ${result.done} `
+          + `${result.done === 1 ? "page" : "pages"} into ${archive.name}, `
+          + `${size(archive.size)}.`);
+      } else if (packing) {
+        CTAMessages.say("Nothing was saved, so there is no archive.", true);
+      } else {
+        CTAMessages.say(result.done === 1
+          ? `Saved 1 page under Downloads/${CTASitePath.ROOT}.`
+          : `Saved ${result.done} pages under Downloads/${CTASitePath.ROOT}.`);
+      }
     } catch (e) {
       CTAMessages.say(`Could not save that page: ${e.message}`, true);
     } finally {
@@ -346,6 +392,7 @@
     el.reach = document.getElementById("site-reach");
     el.prefix = document.getElementById("site-prefix");
     el.limit = document.getElementById("site-limit");
+    el.output = document.getElementById("site-output");
     el.progress = document.getElementById("site-progress");
     el.details = document.getElementById("site-details");
     el.saved = document.getElementById("site-saved");
