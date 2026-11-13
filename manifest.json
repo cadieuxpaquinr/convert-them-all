@@ -1,0 +1,55 @@
+{
+  "manifest_version": 2,
+  "name": "Convert Them All",
+  "version": "0.1.0",
+  "description": "Convert images, audio and web pages in your browser. Download videos with yt-dlp. Nothing is uploaded.",
+  "icons": {
+    "16": "icons/icon.svg",
+    "32": "icons/icon.svg",
+    "48": "icons/icon.svg",
+    "96": "icons/icon.svg"
+  },
+  "permissions": [
+    "downloads",
+    "menus",
+    "nativeMessaging",
+    "storage",
+    "tabs"
+  ],
+  "optional_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "scripts": ["geometry.js", "background.js"]
+  },
+  "browser_action": {
+    "default_title": "Convert Them All",
+    "default_icon": {
+      "16": "icons/icon.svg",
+      "48": "icons/icon.svg"
+    }
+  },
+  "options_ui": {
+    "page": "open-app.html",
+    "open_in_tab": false
+  },
+  "commands": {
+    "primary-action": {
+      "suggested_key": {
+        "default": "Ctrl+1",
+        "mac": "MacCtrl+1",
+        "windows": "Alt+1"
+      },
+      "description": "Open Convert Them All"
+    }
+  },
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "convert-them-all@local",
+      "strict_min_version": "140.0",
+      "data_collection_permissions": {
+        "required": ["none"]
+      }
+    }
+  }
+}

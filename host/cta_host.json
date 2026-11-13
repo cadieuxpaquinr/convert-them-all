@@ -1,0 +1,7 @@
+{
+  "name": "convert_them_all",
+  "description": "Convert Them All helper: runs yt-dlp for the add-on.",
+  "path": "__PATH__",
+  "type": "stdio",
+  "allowed_extensions": ["convert-them-all@local"]
+}

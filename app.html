@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Convert Them All</title>
+  <link rel="stylesheet" href="theme.css">
+  <script src="theme.js"></script>
+  <style>
+    body { font: 14px system-ui, sans-serif; margin: 0; display: flex;
+      height: 100vh; overflow: hidden; }
+    nav { flex: 0 0 var(--sidebar-width, 170px); box-sizing: border-box;
+      padding: 12px 0; display: flex; flex-direction: column; overflow-y: auto;
+      background: var(--panel); }
+    nav .bottom { margin-top: auto; }
+    nav button { display: flex; align-items: center; width: 100%;
+      box-sizing: border-box; padding: 8px 16px; border: 0; background: none;
+      font: inherit; color: inherit; text-align: left; cursor: pointer; }
+    nav button:hover { background: var(--line); }
+    nav button[aria-current] { background: var(--accent); color: var(--accent-fg); }
+    nav hr { border: 0; border-top: 1px solid var(--line); margin: 4px 0; }
+    .icon { flex: 0 0 1.4em; }
+
+    #resize { flex: 0 0 5px; cursor: col-resize; background: var(--line);
+      touch-action: none; }
+
+    main { flex: 1; padding: 16px 20px; overflow-y: auto; }
+    h1 { font-size: 16px; margin: 0 0 14px; }
+    h2 { font-size: 13px; margin: 18px 0 6px; text-transform: uppercase;
+      letter-spacing: 0.04em; color: var(--muted); }
+    section > h2:first-of-type { margin-top: 0; }
+    label { display: block; margin-bottom: 6px; }
+    input[type="text"], input[type="number"] { box-sizing: border-box; padding: 8px;
+      font: inherit; background: var(--field-bg); color: inherit;
+      border: 1px solid var(--field-border); border-radius: 6px; }
+    #shortcut { width: 100%; max-width: 320px; }
+    .fields { display: flex; gap: 10px; flex-wrap: wrap; }
+    .fields label { margin: 0; color: var(--muted); font-size: 12px; }
+    .fields input { width: 90px; display: block; margin-top: 2px; color: var(--fg);
+      font-size: 14px; }
+    .row { margin-top: 10px; display: flex; gap: 8px; }
+    .row button { padding: 8px 12px; border: 0; border-radius: 6px; cursor: pointer;
+      font: inherit; background: var(--button-bg); color: inherit; }
+    .row button.primary { background: var(--accent); color: var(--accent-fg); }
+    .row button.danger { background: var(--error); color: var(--bg); }
+    dialog { max-width: 420px; padding: 18px 20px; border-radius: 8px;
+      border: 1px solid var(--line); background: var(--bg); color: var(--fg); }
+    dialog::backdrop { background: rgba(0, 0, 0, 0.45); }
+    dialog h2 { margin-top: 0; }
+    dialog ul { margin: 6px 0; padding-left: 20px; color: var(--muted); }
+    dialog .row { justify-content: flex-end; }
+    dialog .shout { font-weight: 600; letter-spacing: 0.08em; margin-bottom: 2px; }
+    /* Full contrast, not the muted colour the rest of the hint carries. */
+    dialog .hint strong { color: var(--fg); }
+    .ok { color: var(--ok); }
+    dialog p { margin: 10px 0 0; }
+    .link { padding: 0; border: 0; background: none; font: inherit; cursor: pointer;
+      color: var(--accent); text-align: left; display: block; margin-bottom: 8px; }
+    p.hint { color: var(--muted); font-size: 12px; margin-top: 10px; }
+    fieldset { border: 0; margin: 0; padding: 0; }
+    fieldset label { font-weight: normal; }
+    .check { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+    .check input { margin: 0; accent-color: var(--accent); }
+    [disabled], .off { opacity: 0.5; }
+    [hidden] { display: none !important; }
+    #build { color: var(--muted); font-size: 12px; margin-top: 16px; }
+    .media-selection { word-break: break-all; }
+    .columns { display: flex; gap: 24px; flex-wrap: wrap; margin-top: 18px; }
+    /* Without a basis the hint's max-content width pushes the second column
+       onto its own row. */
+    .columns > div { flex: 0 1 260px; min-width: 0; }
+    .columns h2 { margin-top: 0; }
+    .columns > div + div h2 { margin-top: 14px; }
+    .columns > div + div > h2:first-child { margin-top: 0; }
+    .preview-box { width: 260px; height: 200px; box-sizing: border-box;
+      display: flex; align-items: center; justify-content: center; overflow: hidden;
+      background: var(--panel); border: 1px solid var(--line); border-radius: 6px; }
+    .preview-box > img { max-width: 100%; max-height: 100%; }
+    .preview-missing { color: var(--muted); font-size: 12px; }
+    .notice { margin: 0 0 14px; padding: 10px 12px; border-radius: 6px;
+      border-left: 3px solid var(--line); background: var(--panel); }
+    .notice.blocked { border-left-color: var(--error); }
+    .notice.warn { border-left-color: var(--accent); }
+    .notice.ready { background: none; padding: 0; border-left: 0;
+      color: var(--muted); font-size: 12px; }
+    .notice p { margin: 0 0 6px; }
+    .notice ol { margin: 8px 0 0; padding-left: 20px; }
+    .notice li { margin-bottom: 6px; }
+    .notice code { display: block; margin-top: 3px; padding: 5px 7px; border-radius: 4px;
+      background: var(--field-bg); border: 1px solid var(--line);
+      font: 12px ui-monospace, monospace; user-select: all; word-break: break-all; }
+    #preview-state { margin-top: 8px; }
+    #format { min-width: 150px; padding: 4px; font: inherit; color: inherit;
+      background: var(--field-bg); border: 1px solid var(--field-border);
+      border-radius: 6px; }
+    #format option { padding: 3px 6px; }
+    #image-name { width: 100%; max-width: 220px; }
+    #video-url { width: 100%; max-width: 520px; }
+    #video-output { width: 100%; padding: 4px; font: inherit; color: inherit;
+      background: var(--field-bg); border: 1px solid var(--field-border);
+      border-radius: 6px; }
+    #video-output option { padding: 4px 6px; }
+    .field { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .field > span { flex: 0 0 84px; color: var(--muted); font-size: 12px; }
+    .field select { flex: 1; min-width: 0; padding: 5px; font: inherit; color: inherit;
+      background: var(--field-bg); border: 1px solid var(--field-border);
+      border-radius: 6px; }
+    .field option[disabled] { color: var(--muted); }
+    /* Dimmed on purpose when the machine cannot download: the controls are not
+       broken, they are held shut, and it should look deliberate. */
+    #video-tools.gated { opacity: 0.4; pointer-events: none; filter: grayscale(0.4); }
+    #download-folder { width: 100%; max-width: 420px; }
+    #video-details { margin-top: 10px; color: var(--muted); font-size: 12px; }
+    /* Above everything, and deaf to the pointer: an overlay that could take
+       the drag's events would hide itself the moment it appeared. */
+    #drop-overlay { position: fixed; inset: 0; z-index: 10; pointer-events: none;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(0, 0, 0, 0.45); }
+    #drop-overlay > span { padding: 40px 60px; border-radius: 10px;
+      background: var(--bg); border: 2px dashed var(--accent);
+      color: var(--accent); font-size: 16px; }
+    #site-url { width: 100%; max-width: 560px; }
+    #site-format { min-width: 170px; padding: 4px; font: inherit; color: inherit;
+      background: var(--field-bg); border: 1px solid var(--field-border);
+      border-radius: 6px; }
+    #site-format option { padding: 3px 6px; }
+    #site-prefix { width: 100%; max-width: 420px; padding: 5px; font: inherit;
+      color: inherit; background: var(--field-bg);
+      border: 1px solid var(--field-border); border-radius: 6px; }
+    #site-limit { width: 80px; }
+    #site-scopes label { display: flex; align-items: center; gap: 8px;
+      margin-bottom: 6px; }
+    #site-scopes input { margin: 0; accent-color: var(--accent); }
+    #site-scopes .why { color: var(--muted); font-size: 12px; }
+    #site-details { margin-top: 10px; color: var(--muted); font-size: 12px; }
+    #site-saved { max-height: 180px; overflow: auto; padding: 8px; margin: 6px 0 0;
+      background: var(--field-bg); border: 1px solid var(--line); border-radius: 6px;
+      font: 11px ui-monospace, monospace; white-space: pre-wrap; word-break: break-all; }
+    .facts { margin: 0; font-size: 12px; color: var(--muted); }
+    .facts div { display: flex; gap: 8px; padding: 3px 0;
+      border-bottom: 1px solid var(--line); }
+    .facts div:last-child { border-bottom: 0; }
+    .facts dt { flex: 0 0 90px; }
+    .facts dd { margin: 0; color: var(--fg); word-break: break-all; }
+    #audio-format { min-width: 150px; padding: 4px; font: inherit; color: inherit;
+      background: var(--field-bg); border: 1px solid var(--field-border);
+      border-radius: 6px; }
+    #audio-format option { padding: 3px 6px; }
+    #audio-name { width: 100%; max-width: 220px; }
+    .checklist { list-style: none; margin: 0; padding: 0; }
+    .checklist li { display: flex; gap: 10px; padding: 8px 0;
+      border-bottom: 1px solid var(--line); }
+    .checklist li:last-child { border-bottom: 0; }
+    .checklist .mark { flex: 0 0 1.2em; font-size: 15px; line-height: 1.4; }
+    .checklist .mark[data-mark="ok"] { color: var(--ok); }
+    .checklist .mark[data-mark="old"] { color: var(--accent); }
+    .checklist .mark[data-mark="bad"] { color: var(--error); }
+    .checklist .mark[data-mark="unknown"] { color: var(--muted); }
+    .checklist .what { min-width: 0; flex: 1; }
+    .checklist .name { font-weight: 600; }
+    .checklist .detail { margin: 2px 0 0; color: var(--muted); font-size: 12px; }
+    .checklist code { display: block; margin-top: 5px; padding: 5px 7px;
+      border-radius: 4px; background: var(--field-bg); border: 1px solid var(--line);
+      font: 12px ui-monospace, monospace; user-select: all; word-break: break-all; }
+    /* The corner. Above the panes and clear of the drop overlay, which is the
+       only other thing that covers the window. */
+    #messages { position: fixed; top: 10px; right: 14px; z-index: 20;
+      display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+    #message-bell { padding: 2px 6px; border: 0; border-radius: 6px;
+      background: none; color: var(--muted); font-size: 18px; line-height: 1;
+      cursor: pointer; }
+    #message-bell:hover { background: var(--line); color: var(--fg); }
+    #message-stack { display: flex; flex-direction: column; gap: 8px;
+      align-items: flex-end; }
+    .toast { display: flex; align-items: flex-start; gap: 10px; max-width: 320px;
+      padding: 9px 10px 9px 12px; border-radius: 6px; background: var(--panel);
+      border: 1px solid var(--line); border-left: 3px solid var(--ok);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
+    .toast[data-kind="error"] { border-left-color: var(--error); }
+    .toast .text { word-break: break-word; }
+    .toast .close { padding: 0 2px; border: 0; background: none; color: var(--muted);
+      font: inherit; font-size: 15px; line-height: 1.1; cursor: pointer; }
+    .toast .close:hover { color: var(--fg); }
+    #message-panel { width: 300px; padding: 10px 12px; border-radius: 6px;
+      background: var(--bg); border: 1px solid var(--line);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); }
+    #message-list { list-style: none; margin: 0; padding: 0;
+      max-height: 260px; overflow-y: auto; }
+    #message-list li { display: flex; gap: 8px; padding: 4px 0;
+      border-bottom: 1px solid var(--line); }
+    #message-list li:last-child { border-bottom: 0; }
+    #message-list li[data-kind="error"] .at { color: var(--error); }
+    #message-list li.empty { color: var(--muted); }
+    #message-list .at { flex: 0 0 auto; color: var(--muted);
+      font: 12px ui-monospace, monospace; padding-top: 1px; }
+    #video-raw { max-height: 160px; overflow: auto; padding: 8px; margin: 6px 0 0;
+      background: var(--field-bg); border: 1px solid var(--line); border-radius: 6px;
+      font: 11px ui-monospace, monospace; white-space: pre-wrap; word-break: break-all; }
+  </style>
+</head>
+<body>
+  <div id="drop-overlay" hidden><span>Drop an image here</span></div>
+
+  <div id="messages">
+    <button id="message-bell" type="button" title="Recent messages"
+      aria-expanded="false">&#x1F56D;</button>
+    <div id="message-panel" hidden>
+      <ul id="message-list"></ul>
+      <div class="row">
+        <button id="message-clear">Clear</button>
+      </div>
+    </div>
+    <div id="message-stack"></div>
+  </div>
+
+  <nav id="sections">
+    <div class="top">
+      <button data-section="images">Images</button>
+      <button data-section="videos">Videos</button>
+      <button data-section="audio">Audio</button>
+      <button data-section="websites">Websites</button>
+      <button data-section="files">Files</button>
+    </div>
+    <div class="bottom">
+      <hr>
+      <button data-section="report"><span class="icon">&#9873;</span>Report a bug</button>
+      <button data-section="about"><span class="icon">&#9733;</span>About</button>
+      <button data-section="settings"><span class="icon">&#9881;</span>Settings</button>
+    </div>
+  </nav>
+  <div id="resize" role="separator" aria-orientation="vertical"
+    aria-label="Resize the section list"></div>
+
+  <main>
+    <!-- Shown when the app opens, and not listed in the sidebar. -->
+    <section id="home">
+      <h1>Convert Them All</h1>
+      <p>Images are converted by the browser itself. Videos are downloaded by
+        two programs on your computer, which are free and installed once.</p>
+
+      <h2>Video downloads</h2>
+      <ul id="home-tools" class="checklist"></ul>
+      <p id="home-helper" class="hint" hidden></p>
+      <div class="row">
+        <button id="home-recheck">Check again</button>
+      </div>
+
+      <h2>Permissions</h2>
+      <ul class="checklist">
+        <li id="home-access">
+          <span class="mark" data-mark="unknown">&#9675;</span>
+          <div class="what">
+            <span class="name">All sites</span>
+            <p class="detail" id="access-detail"></p>
+            <div class="row" id="access-actions">
+              <button id="access-allow">Allow on all sites</button>
+            </div>
+          </div>
+        </li>
+      </ul>
+
+      <p>Pick a section on the left.</p>
+    </section>
+
+    <section id="images" hidden>
+      <h1>Images</h1>
+      <p id="image-selection" class="media-selection">Right-click an image on a page and
+        choose &ldquo;Convert to&hellip;&rdquo;, or open one from your computer.</p>
+      <div class="row">
+        <button id="pick-file">Choose an image&hellip;</button>
+        <input type="file" id="image-file" accept="image/*" hidden>
+      </div>
+
+      <div class="columns">
+        <div>
+          <h2>Preview</h2>
+          <div class="preview-box">
+            <img id="image-preview" alt="">
+            <span id="preview-missing" class="preview-missing" hidden>Preview unavailable</span>
+          </div>
+          <p id="preview-state" class="hint">Original</p>
+        </div>
+
+        <div>
+          <h2>Convert to</h2>
+          <select id="format" size="6"></select>
+
+          <h2>Name</h2>
+          <input id="image-name" type="text" placeholder="image">
+
+          <div class="row">
+            <button id="convert" class="primary">Convert</button>
+            <button id="download">Download</button>
+          </div>
+          <div id="forget-site" hidden>
+            <p class="hint" id="forget-text"></p>
+            <div class="row">
+              <button id="forget-button">Remove permissions</button>
+            </div>
+          </div>
+          <p class="hint">Download saves the converted image, or the original one when
+            you have not converted it yet. Everything happens on your computer.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="videos" hidden>
+      <h1>Videos</h1>
+
+      <div id="video-helper" class="notice">
+        <p id="helper-title">Checking what this computer can do&hellip;</p>
+        <p id="helper-detail" class="hint"></p>
+        <ol id="helper-steps"></ol>
+        <div class="row" id="helper-actions" hidden>
+          <button id="helper-recheck">Check again</button>
+          <button id="helper-link" hidden></button>
+        </div>
+      </div>
+      <p id="video-selection" class="media-selection">Right-click a video on a page and
+        choose &ldquo;Convert to&hellip;&rdquo;.</p>
+
+      <div id="video-tools">
+      <h2>Video link</h2>
+      <input id="video-url" type="text" spellcheck="false"
+        placeholder="https://&hellip;">
+      <div class="row">
+        <button id="video-detect">Detect on this page</button>
+      </div>
+
+      <div class="columns">
+        <div>
+          <h2>Format</h2>
+          <select id="video-output" size="3"></select>
+        </div>
+        <div>
+          <h2>Options</h2>
+          <div id="video-options"></div>
+          <p class="hint" id="video-option-hint" hidden></p>
+          <p class="hint" id="video-offers" hidden></p>
+        </div>
+      </div>
+
+      <div class="row">
+        <button id="video-download" class="primary">Download</button>
+        <button id="video-cancel" hidden>Cancel</button>
+      </div>
+      <p id="video-progress" class="hint" hidden></p>
+      <details id="video-details" hidden>
+        <summary>Details</summary>
+        <pre id="video-raw"></pre>
+      </details>
+      </div>
+    </section>
+
+    <section id="audio" hidden>
+      <h1>Audio</h1>
+      <p id="audio-selection" class="media-selection">Open an audio file from your
+        computer, or drop one on this window.</p>
+      <div class="row">
+        <button id="pick-audio">Choose an audio file&hellip;</button>
+        <input type="file" id="audio-file" accept="audio/*" hidden>
+      </div>
+
+      <div class="columns">
+        <div>
+          <h2>The file</h2>
+          <dl id="audio-facts" class="facts"></dl>
+          <p id="audio-state" class="hint">Original</p>
+        </div>
+
+        <div>
+          <h2>Convert to</h2>
+          <select id="audio-format" size="6"></select>
+
+          <h2>Options</h2>
+          <label class="field"><span>Sample rate</span>
+            <select id="audio-rate"></select></label>
+          <label class="field"><span>Bit depth</span>
+            <select id="audio-depth"></select></label>
+
+          <h2>Name</h2>
+          <input id="audio-name" type="text" placeholder="audio">
+
+          <div class="row">
+            <button id="audio-convert" class="primary">Convert</button>
+            <button id="audio-download">Download</button>
+          </div>
+          <p class="hint">WAV holds the sound exactly as it was decoded, so the
+            file is large. Everything happens on your computer.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="websites" hidden>
+      <h1>Websites</h1>
+
+      <div class="notice warn">
+        <p><strong>BETA.</strong> A saved page is a copy, not the site. Pages
+          that build themselves as you read them will come out incomplete, and
+          scripts are removed on purpose.</p>
+        <p class="hint">Saving the one page you need is what works best. The
+          wider the reach, the longer it takes and the more there is to go
+          wrong.</p>
+      </div>
+
+      <p id="site-selection" class="media-selection">Paste a page address, or
+        detect the one you are reading.</p>
+      <input id="site-url" type="text" spellcheck="false"
+        placeholder="https://example.com/guide/page.html">
+      <div class="row">
+        <button id="site-detect">Detect current page</button>
+        <button id="site-save" class="primary">Save</button>
+        <button id="site-cancel" hidden>Cancel</button>
+      </div>
+
+      <div class="columns">
+        <div>
+          <h2>Convert to</h2>
+          <select id="site-format" size="5"></select>
+        </div>
+
+        <div>
+          <h2>How much</h2>
+          <fieldset id="site-scopes"></fieldset>
+
+          <div id="site-reach" hidden>
+            <h2>Up to</h2>
+            <select id="site-prefix"></select>
+            <p class="hint">Only addresses under this are followed. A whole site
+              is a section, not a host.</p>
+            <label class="field"><span>Stop after</span>
+              <input id="site-limit" type="number" min="1" max="2000" value="50">
+              <span>pages</span></label>
+          </div>
+        </div>
+      </div>
+
+      <p id="site-progress" class="hint" hidden></p>
+      <details id="site-details" hidden>
+        <summary>What was saved</summary>
+        <pre id="site-saved"></pre>
+      </details>
+      <p class="hint">Pages are saved under Downloads, in a folder named after
+        the site. This is Firefox's download folder, not the one in Settings,
+        which belongs to video downloads.</p>
+    </section>
+
+    <section id="files" hidden>
+      <h1>Files</h1>
+      <p>Anything that is not an image or an audio file lands here. There is
+        nothing to convert it to yet.</p>
+      <div class="row">
+        <button id="pick-any">Choose a file&hellip;</button>
+        <input type="file" id="any-file" hidden>
+      </div>
+      <p id="file-dropped" class="media-selection" hidden></p>
+    </section>
+
+    <section id="report" hidden>
+      <h1>Report a bug</h1>
+      <p>Bugs are tracked on GitHub.</p>
+      <button class="link" id="issues">Open the issue tracker</button>
+    </section>
+
+    <section id="about" hidden>
+      <h1>About</h1>
+      <p>Converts images, in your browser and on your computer only.
+        Nothing is uploaded anywhere.</p>
+      <button class="link" id="source">Source code</button>
+      <button class="link" id="follow">Follow me</button>
+      <div id="build"></div>
+    </section>
+
+    <section id="settings" hidden>
+      <h1>Settings</h1>
+
+      <h2>Shortcut</h2>
+      <label for="shortcut">Press the keys you want to use</label>
+      <input id="shortcut" type="text" readonly placeholder="Click here, then press keys">
+      <div class="row">
+        <button id="save" class="primary">Save</button>
+        <button id="reset">Reset to default</button>
+      </div>
+      <label class="check"><input type="checkbox" id="disable-shortcut">
+        <span id="shortcut-label">Disable shortcut</span></label>
+      <p class="hint">You can also change this any time from Firefox's
+        Add-ons page &rarr; gear menu &rarr; Manage Extension Shortcuts.</p>
+
+      <h2>Window</h2>
+      <div class="fields">
+        <label>X <input id="win-x" type="number" placeholder="centred"></label>
+        <label>Y <input id="win-y" type="number" placeholder="centred"></label>
+        <label>Width <input id="win-width" type="number"></label>
+        <label>Height <input id="win-height" type="number"></label>
+      </div>
+      <div class="row">
+        <button id="geometry-save" class="primary">Save</button>
+        <button id="geometry-current">Use current</button>
+        <button id="geometry-reset">Reset to default</button>
+      </div>
+      <p class="hint">Applies the next time the app opens. Leave X and Y empty to
+        centre the window.</p>
+
+      <h2>Downloads</h2>
+      <label for="download-folder">Where videos are saved</label>
+      <input id="download-folder" type="text" spellcheck="false"
+        placeholder="the usual Downloads folder">
+      <div class="row">
+        <button id="folder-save" class="primary">Save</button>
+        <button id="folder-default">Use the default</button>
+      </div>
+
+      <h2>Conversions</h2>
+      <label class="check"><input type="checkbox" id="all-sites">
+        <span>Allow conversions on all sites</span></label>
+      <p class="hint">Give permission one time instead of once for each new site.</p>
+
+      <h2>Theme</h2>
+      <fieldset>
+        <label><input type="radio" name="theme" value="system"> Follow system</label>
+        <label><input type="radio" name="theme" value="light"> Light</label>
+        <label><input type="radio" name="theme" value="dark"> Dark</label>
+      </fieldset>
+    </section>
+
+    <dialog id="site-warning">
+      <h2>Save the whole section?</h2>
+      <p class="shout">THIS CAN TAKE A LONG TIME</p>
+      <p id="site-warning-what" class="hint"></p>
+      <p class="hint">Every page under that address is fetched one at a time
+        from someone else's server. Hundreds of pages means hundreds of
+        requests, and several minutes.</p>
+      <p class="hint"><strong>Saving only the page you need is recommended.</strong>
+        It is instant, and it is what most people want.</p>
+      <div class="row">
+        <button id="site-warning-no">Just this page</button>
+        <button id="site-warning-yes" class="danger">Save the whole section</button>
+      </div>
+    </dialog>
+
+    <dialog id="sites-dialog">
+      <h2>Permission removed <span class="ok">successfully</span></h2>
+      <p>Conversions no longer have access to every site.</p>
+      <div id="sites-rest">
+        <p class="shout">BUT</p>
+        <p id="sites-count"></p>
+        <ul id="sites-list"></ul>
+        <p class="hint">Removing them means being asked again the next time you convert
+          an image from them.</p>
+        <p class="hint">The add-on asks this only to make it easier for you, because it
+          looks like you want to remove permissions. <strong>Clicking &ldquo;Keep current
+          permissions&rdquo; does not turn access to every site back on.</strong></p>
+      </div>
+      <div class="row">
+        <button id="sites-keep">Keep current permissions</button>
+        <button id="sites-remove" class="danger">Remove permissions</button>
+      </div>
+    </dialog>
+  </main>
+
+  <script src="platform.js"></script>
+  <script src="shortcut.js"></script>
+  <script src="geometry.js"></script>
+  <script src="sidebar.js"></script>
+  <script src="settings.js"></script>
+  <script src="about.js"></script>
+  <script src="access.js"></script>
+  <script src="ico.js"></script>
+  <script src="convert.js"></script>
+  <script src="native.js"></script>
+  <script src="readiness.js"></script>
+  <script src="videoformat.js"></script>
+  <script src="videoprefs.js"></script>
+  <script src="failures.js"></script>
+  <script src="folder.js"></script>
+  <script src="messages.js"></script>
+  <script src="kinds.js"></script>
+  <script src="wav.js"></script>
+  <script src="audioconvert.js"></script>
+  <script src="report.js"></script>
+  <script src="drop.js"></script>
+  <script src="images.js"></script>
+  <script src="videos.js"></script>
+  <script src="sitepath.js"></script>
+  <script src="crawl.js"></script>
+  <script src="markdown.js"></script>
+  <script src="webconvert.js"></script>
+  <script src="files.js"></script>
+  <script src="audio.js"></script>
+  <script src="websites.js"></script>
+  <script src="home.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

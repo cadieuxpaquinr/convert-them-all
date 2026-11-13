@@ -1,0 +1,34 @@
+/*
+ * Shared palette for menu.html and options.html.
+ *
+ * Each color is declared once as a light/dark pair. The pair resolves against
+ * color-scheme, so overriding the theme is only a matter of pinning
+ * color-scheme on <html>; no data-theme means follow the system.
+ * Dark values follow Firefox's own dark palette so the surfaces do not clash
+ * with the browser.
+ */
+
+:root {
+  color-scheme: light dark;
+
+  --bg: light-dark(#ffffff, #1c1b22);
+  --fg: light-dark(#1b1b2f, #fbfbfe);
+  --muted: light-dark(#666666, #b1b1bb);
+  --line: light-dark(#e0e0e0, #52525e);
+  --field-bg: light-dark(#ffffff, #2b2a33);
+  --field-border: light-dark(#aaaaaa, #8f8f9d);
+  --accent: light-dark(#4361ee, #7c8fff);
+  --accent-fg: light-dark(#ffffff, #15141a);
+  --button-bg: light-dark(#e0e0e0, #3a3944);
+  --ok: light-dark(#22aa77, #54ffbd);
+  --error: light-dark(#cc3333, #ff9aa2);
+  --panel: light-dark(#f6f6f8, #23222b);
+}
+
+html[data-theme="light"] { color-scheme: light; }
+html[data-theme="dark"] { color-scheme: dark; }
+
+html, body {
+  background: var(--bg);
+  color: var(--fg);
+}
