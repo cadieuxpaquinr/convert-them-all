@@ -54,6 +54,16 @@ Pick an audio file, or drop one. Firefox decodes mp3, wav, flac, ogg, opus, m4a 
 A browser has no audio encoder but MediaRecorder, which writes Opus alone and in real
 time. WAV is written from the decoded samples instead, which is instant and exact.
 
+### Sheets
+
+Open an **xlsx**, an **ods**, a **csv** or a **tsv** and save it as CSV (one file per
+sheet, or the first alone), TSV, or JSON keyed by the header row.
+
+What comes out is the data, not the formatting: a formula arrives as the answer it last
+gave, and a date as the day it names rather than as the number a spreadsheet stores.
+Writing a workbook back out is not offered, because one that a spreadsheet refused to
+open would be worse than not offering it.
+
 ### Archives
 
 Open a zip, a tar or a tar.gz and it lists what is inside with a tick each, sizes and
@@ -154,8 +164,8 @@ off it is.
 
 **The browser can already do these**
 
-- **Sheets**: xlsx and ods to csv, and back. Both are a zip full of XML, so they ride on
-  the archive reader and the parser the Websites pane already uses.
+- **Sheets, written back**: csv into a real xlsx or ods, which means building the XML
+  rather than only reading it.
 - **Documents**: Markdown, HTML and docx between each other, and a saved website section
   as one EPUB. docx and EPUB are a zip full of XML as well.
 - **Batch, and whole pages**: convert many files in one go, drop a folder, and a

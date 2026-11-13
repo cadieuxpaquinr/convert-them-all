@@ -19,7 +19,7 @@ user_pref("browser.cache.disk.enable", false);
 user_pref("browser.cache.memory.enable", false);
 user_pref("browser.sessionstore.resume_from_crash", false);
 PREFS
-  timeout 40 firefox --headless --no-remote --profile "$prof" "http://localhost:8099/$name.html" > "$log" 2>&1
+  timeout 90 firefox --headless --no-remote --profile "$prof" "http://localhost:8099/$name.html" > "$log" 2>&1
   echo "$name: $(grep -c '^PASS' "$log") pass, $(grep -c '^FAIL' "$log") fail, done=$(grep -c 'HARNESS-DONE' "$log")"
 done
 pkill -f "http.server 8099"

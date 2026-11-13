@@ -163,6 +163,11 @@
     .entries .folder { color: var(--muted); }
     .entries p { color: var(--muted); font-size: 12px; margin: 6px 0; }
     #archive-name { width: 100%; max-width: 220px; margin-top: 6px; }
+    #sheet-name { width: 100%; max-width: 220px; }
+    #sheet-format { padding: 5px; font: inherit; color: inherit;
+      background: var(--field-bg); border: 1px solid var(--field-border);
+      border-radius: 6px; }
+    .entries div { display: flex; gap: 8px; padding: 3px 0; font-size: 12px; }
     #archive-format { padding: 5px; font: inherit; color: inherit;
       background: var(--field-bg); border: 1px solid var(--field-border);
       border-radius: 6px; }
@@ -248,6 +253,7 @@
       <button data-section="images">Images</button>
       <button data-section="videos">Videos</button>
       <button data-section="audio">Audio</button>
+      <button data-section="sheets">Sheets</button>
       <button data-section="archives">Archives</button>
       <button data-section="websites">Websites</button>
       <button data-section="files">Files</button>
@@ -449,6 +455,43 @@
           </div>
           <p class="hint">WAV holds the sound exactly as it was decoded, so the
             file is large. Everything happens on your computer.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="sheets" hidden>
+      <h1>Sheets</h1>
+      <p id="sheet-selection" class="media-selection">Open an xlsx, an ods, a csv
+        or a tsv, or drop one on this window.</p>
+      <div class="row">
+        <button id="pick-sheet">Choose a spreadsheet&hellip;</button>
+        <input type="file" id="sheet-file"
+          accept=".xlsx,.xlsm,.ods,.csv,.tsv,text/csv" hidden>
+      </div>
+
+      <div class="columns">
+        <div>
+          <h2>The sheets</h2>
+          <div id="sheet-list" class="entries"></div>
+          <p class="hint">Rows by columns. A formula is read as the answer it
+            last gave, and a date as the day it names.</p>
+        </div>
+
+        <div>
+          <h2>Convert to</h2>
+          <label class="field"><span>As</span>
+            <select id="sheet-format"></select></label>
+          <label class="check"><input type="checkbox" id="sheet-header" checked>
+            <span>The first row names the columns, for JSON</span></label>
+
+          <h2>Name</h2>
+          <input id="sheet-name" type="text" placeholder="sheet">
+
+          <div class="row">
+            <button id="sheet-save" class="primary">Save</button>
+          </div>
+          <p class="hint">Writing a spreadsheet back out is not offered yet.
+            Everything here is read-only, and lands under Downloads.</p>
         </div>
       </div>
     </section>
@@ -681,6 +724,7 @@
   <script src="formats/jpegmeta.js"></script>
   <script src="formats/pdf.js"></script>
   <script src="formats/zip.js"></script>
+  <script src="formats/sheet.js"></script>
   <script src="formats/tar.js"></script>
   <script src="platform/native.js"></script>
   <script src="platform/readiness.js"></script>
@@ -703,6 +747,7 @@
   <script src="panes/files.js"></script>
   <script src="panes/audio.js"></script>
   <script src="panes/archives.js"></script>
+  <script src="panes/sheets.js"></script>
   <script src="panes/websites.js"></script>
   <script src="panes/home.js"></script>
   <script src="app.js"></script>

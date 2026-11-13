@@ -20,20 +20,27 @@
       "svg", "tif", "tiff", "heic", "heif"],
     audio: ["mp3", "wav", "wave", "flac", "ogg", "oga", "opus", "m4a", "aac",
       "weba", "wma", "aiff", "aif", "mka"],
-    archive: ["zip", "tar", "gz", "tgz", "tbz", "bz2", "xz", "7z", "rar"]
+    archive: ["zip", "tar", "gz", "tgz", "tbz", "bz2", "xz", "7z", "rar"],
+    sheet: ["xlsx", "xlsm", "xls", "ods", "csv", "tsv"]
   };
 
   // An archive's type is often missing or wrong, and the names it goes by are
   // many, so these are checked before the loose prefix rules below.
+  const SHEET_TYPES = new Set([
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "application/vnd.oasis.opendocument.spreadsheet",
+    "application/vnd.ms-excel", "text/csv", "text/tab-separated-values"
+  ]);
+
   const ARCHIVE_TYPES = new Set([
     "application/zip", "application/x-zip-compressed", "application/x-tar",
     "application/gzip", "application/x-gzip", "application/x-compressed-tar"
   ]);
 
   const SECTIONS = { image: "images", audio: "audio", archive: "archives",
-    other: "files" };
+    sheet: "sheets", other: "files" };
   const NOUNS = { image: "an image", audio: "an audio file",
-    archive: "an archive", other: "a file" };
+    archive: "an archive", sheet: "a spreadsheet", other: "a file" };
 
   function extensionOf(name) {
     const dot = String(name || "").lastIndexOf(".");
@@ -45,6 +52,8 @@
   function of(file) {
     if (!file) return "other";
     const type = String(file.type || "").toLowerCase();
+    // A spreadsheet is a zip too, so it is asked about before archives are.
+    if (SHEET_TYPES.has(type)) return "sheet";
     if (ARCHIVE_TYPES.has(type)) return "archive";
     if (type.startsWith("image/")) return "image";
     if (type.startsWith("audio/")) return "audio";
@@ -55,6 +64,7 @@
     const ext = extensionOf(file.name);
     if (EXTENSIONS.image.includes(ext)) return "image";
     if (EXTENSIONS.audio.includes(ext)) return "audio";
+    if (EXTENSIONS.sheet.includes(ext)) return "sheet";
     if (EXTENSIONS.archive.includes(ext)) return "archive";
     return "other";
   }

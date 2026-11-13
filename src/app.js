@@ -44,7 +44,7 @@
   // below, down with it: that would leave the app sitting on its home page with
   // no sign of why.
   for (const pane of [CTASettings, CTAAbout, CTAImages, CTAVideos, CTAFiles,
-    CTAAudio, CTAArchives, CTAWebsites, CTAHome]) {
+    CTAAudio, CTAArchives, CTASheets, CTAWebsites, CTAHome]) {
     try {
       pane.mount();
     } catch (e) {
@@ -53,12 +53,13 @@
   }
 
   const PANES = { images: "Images", audio: "Audio", archives: "Archives",
-    files: "Files" };
+    sheets: "Sheets", files: "Files" };
 
   const TAKERS = {
     images: (file) => CTAImages.file(file),
     audio: (file) => CTAAudio.file(file),
     archives: (file) => CTAArchives.file(file),
+    sheets: (file) => CTASheets.file(file),
     files: (file) => CTAFiles.set(file)
   };
 
@@ -101,6 +102,7 @@
   CTAFiles.onPick(handFile);
   CTAAudio.onPick(handFile);
   CTAArchives.onPick(handFile);
+  CTASheets.onPick(handFile);
 
   // The background says which section to show, and gives an image only when one
   // comes with it: opening the app from the toolbar or the shortcut asks for the
