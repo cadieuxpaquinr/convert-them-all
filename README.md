@@ -176,10 +176,21 @@ off it is.
 No build step, no bundler and no dependencies. Every file ships as written, one module per
 job, each exposing a single `CTA*` global.
 
+```
+manifest.json          the only file Firefox needs at the root
+src/app.html           the app window, and every script tag
+src/panes/             one file per section
+src/formats/           the converters and the containers they write
+src/platform/          permissions, the helper, messages, drops, settings
+host/                  the native helper for video downloads
+dev/                   tooling, never packaged
+```
+
 ```sh
-npx web-ext lint --source-dir .     # 0 errors expected
-./dev/firefox.sh                    # run it in a Firefox of its own
+./dev/check.sh                      # the node checks, for the pure modules
 ./dev/sync-harness.py               # rebuild the test pages after any change
+./dev/firefox.sh                    # run it in a Firefox of its own
+npx web-ext lint --source-dir .     # 0 errors expected
 ```
 
 The pure modules are checked with node. The rest run in harness pages that load the real

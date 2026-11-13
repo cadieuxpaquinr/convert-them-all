@@ -90,7 +90,7 @@ async function openApp() {
   }
   const geometry = await CTAGeometry.read().catch(() => CTAGeometry.normalize(null));
   const win = await browser.windows.create(Object.assign(
-    { url: browser.runtime.getURL("app.html"), type: "popup" },
+    { url: browser.runtime.getURL("src/app.html"), type: "popup" },
     await placement(geometry)
   ));
   appWindowId = win.id;
