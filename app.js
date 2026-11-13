@@ -30,13 +30,42 @@
   // One pane that fails to mount must not take the others, nor the handover
   // below, down with it: that would leave the app sitting on its home page with
   // no sign of why.
-  for (const pane of [CTASettings, CTAAbout, CTAImages, CTAVideos]) {
+  for (const pane of [CTASettings, CTAAbout, CTAImages, CTAVideos, CTAFiles]) {
     try {
       pane.mount();
     } catch (e) {
       console.error("Convert Them All: a section failed to load.", e);
     }
   }
+
+  // A file says what it is, so one that is not an image goes to Files rather
+  // than failing in a pane that could never take it. An address says nothing
+  // about what is behind it, and goes to Images: the preview is the answer.
+  function isImage(file) {
+    if (file.type) return file.type.startsWith("image/");
+    return !!CTAConvert.formatFrom(file.name);
+  }
+
+  function dropped(item) {
+    if (item.kind === "url") {
+      show("images");
+      CTAImages.set(item.url);
+      return;
+    }
+    if (!isImage(item.file)) {
+      show("files");
+      CTAFiles.set(item.file);
+      return;
+    }
+    show("images");
+    CTAImages.file(item.file);
+    if (item.ignored > 0) {
+      CTAImages.note(`One image at a time, so ${item.ignored} more `
+        + `${item.ignored === 1 ? "was" : "were"} left out.`);
+    }
+  }
+
+  CTADrop.mount(document.getElementById("drop-overlay"), dropped);
 
   // The background says which section to show, and gives an image only when one
   // comes with it: opening the app from the toolbar or the shortcut asks for the

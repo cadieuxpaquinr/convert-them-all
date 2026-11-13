@@ -36,6 +36,13 @@ def main():
     page = page.replace('<link rel="stylesheet" href="theme.css">',
                         f'<link rel="stylesheet" href="theme.css">\n  {STUB}', 1)
 
+    # Driverless, for the harnesses that load the app in a frame rather than
+    # driving it in place. Both went stale and were missing two modules.
+    (HARNESS / "app.html").write_text(page, encoding="utf-8")
+    (HARNESS / "app-bridge.html").write_text(
+        page.replace(STUB, '<script src="bridge-app.js"></script>', 1),
+        encoding="utf-8")
+
     built = 0
     for driver in sorted(HARNESS.glob("*-drive.js")):
         name = driver.stem

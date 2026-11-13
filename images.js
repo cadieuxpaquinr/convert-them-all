@@ -186,8 +186,8 @@
     showPreview(src.url);
   }
 
-  // A file the user picks needs no permission at all: the picker is the consent,
-  // and the bytes are handed over with it.
+  // A file the user picks or drops needs no permission at all: the gesture is
+  // the consent, and the bytes are handed over with it.
   function loadFile(file) {
     if (file.type && !file.type.startsWith("image/")) {
       setStatus(`${file.name} is not an image.`, true);
@@ -259,5 +259,10 @@
     load(url ? { url, name: url, label: short(url) } : null);
   }
 
-  window.CTAImages = { mount, set };
+  // Said after the image is in, so it is not mistaken for a failure.
+  function note(message) {
+    setStatus(message);
+  }
+
+  window.CTAImages = { mount, set, file: loadFile, note };
 })();

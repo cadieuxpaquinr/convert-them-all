@@ -112,12 +112,22 @@
     #video-tools.gated { opacity: 0.4; pointer-events: none; filter: grayscale(0.4); }
     #download-folder { width: 100%; max-width: 420px; }
     #video-details { margin-top: 10px; color: var(--muted); font-size: 12px; }
+    /* Above everything, and deaf to the pointer: an overlay that could take
+       the drag's events would hide itself the moment it appeared. */
+    #drop-overlay { position: fixed; inset: 0; z-index: 10; pointer-events: none;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(0, 0, 0, 0.45); }
+    #drop-overlay > span { padding: 40px 60px; border-radius: 10px;
+      background: var(--bg); border: 2px dashed var(--accent);
+      color: var(--accent); font-size: 16px; }
     #video-raw { max-height: 160px; overflow: auto; padding: 8px; margin: 6px 0 0;
       background: var(--field-bg); border: 1px solid var(--line); border-radius: 6px;
       font: 11px ui-monospace, monospace; white-space: pre-wrap; word-break: break-all; }
   </style>
 </head>
 <body>
+  <div id="drop-overlay" hidden><span>Drop an image here</span></div>
+
   <nav id="sections">
     <div class="top">
       <button data-section="images">Images</button>
@@ -248,6 +258,7 @@
     <section id="files" hidden>
       <h1>Files</h1>
       <p>PLACEHOLDER. No feature yet.</p>
+      <p id="file-dropped" class="media-selection" hidden></p>
     </section>
 
     <section id="report" hidden>
@@ -354,8 +365,10 @@
   <script src="videoprefs.js"></script>
   <script src="failures.js"></script>
   <script src="folder.js"></script>
+  <script src="drop.js"></script>
   <script src="images.js"></script>
   <script src="videos.js"></script>
+  <script src="files.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
