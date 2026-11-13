@@ -26,7 +26,13 @@
       encoder: "text" },
     { id: "md", label: "Markdown", ext: "md", mime: "text/markdown",
       encoder: "markdown" },
-    { id: "pdf", label: "PDF", ext: "pdf", mime: "application/pdf", encoder: null }
+    { id: "pdf-text", label: "PDF, text layout", ext: "pdf",
+      mime: "application/pdf", encoder: "pdf" },
+    // Firefox's own printer, which is the only faithful one there is. It can
+    // only print the tab that is open and in front, so the pane greys it when
+    // the address is anything else.
+    { id: "pdf-print", label: "PDF, printed by Firefox", ext: "pdf",
+      mime: "application/pdf", encoder: "print", needsTab: true }
   ];
 
   // Anything larger is left as a link rather than inlined: a data: URL is a
@@ -183,6 +189,12 @@
     }
 
     const doc = parse(options.html);
+    if (target.encoder === "pdf") {
+      return await CTAPdf.fromText({
+        title: (doc.title || "").trim(),
+        blocks: blocksOf(doc)
+      });
+    }
     if (target.encoder === "text") {
       return new Blob([textOf(doc)], { type: `${target.mime};charset=utf-8` });
     }
@@ -195,6 +207,31 @@
     settleLinks(doc, base, options.localFor);
     await inline(doc, base, options.onStep);
     return new Blob([serialise(doc)], { type: `${target.mime};charset=utf-8` });
+  }
+
+  // A page as a list of blocks, which is what the PDF writer lays out. The
+  // walk is the same shape as the Markdown one: headings, paragraphs, lists
+  // and code, and everything else is its text.
+  function blocksOf(doc) {
+    const blocks = [];
+    const body = doc.body || doc;
+    const wanted = "h1, h2, h3, h4, h5, h6, p, li, pre, blockquote";
+    for (const node of Array.from(body.querySelectorAll(wanted))) {
+      // A paragraph inside a list item would otherwise be written twice.
+      if (node.parentElement && node.parentElement.closest("li, pre")) continue;
+      const tag = node.tagName.toLowerCase();
+      const text = tag === "pre"
+        ? node.textContent.replace(/\s+$/, "")
+        : node.textContent.replace(/\s+/g, " ").trim();
+      if (!text) continue;
+      if (tag === "pre") blocks.push({ type: "pre", text });
+      else if (tag === "li") blocks.push({ type: "li", text });
+      else if (tag === "blockquote") blocks.push({ type: "p", text });
+      else if (tag === "h1" || tag === "h2") blocks.push({ type: "h2", text });
+      else if (tag.startsWith("h")) blocks.push({ type: "h3", text });
+      else blocks.push({ type: "p", text });
+    }
+    return blocks;
   }
 
   // The links worth following, in the order the page lists them.
@@ -214,6 +251,6 @@
 
   window.CTAWeb = {
     FORMATS, MAX_ASSET, format, available, page, linksIn, titleOf,
-    parse, textOf, settleLinks, serialise
+    parse, textOf, blocksOf, settleLinks, serialise
   };
 })();

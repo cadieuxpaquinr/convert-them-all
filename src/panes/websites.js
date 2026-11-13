@@ -23,6 +23,9 @@
   let planned = new Map();
   // What really landed, for the list the pane shows.
   let saved = [];
+  // The address Firefox has in front of the user, which is the only thing its
+  // own printer can turn into a PDF.
+  let inFront = "";
 
   function setProgress(text) {
     el.progress.textContent = text || "";
@@ -47,6 +50,31 @@
       el.format.appendChild(option);
     }
     el.format.value = CTAWeb.FORMATS[0].id;
+  }
+
+  // Firefox can only print the page it is showing. The entry stays visible so
+  // it can be found, and says why it is shut when the address is elsewhere.
+  function paintPrintable() {
+    const target = CTAWeb.FORMATS.find((f) => f.needsTab);
+    const option = [...el.format.options].find((o) => o.value === target.id);
+    const ready = inFront && el.url.value.trim() === inFront;
+    option.disabled = !ready;
+    option.textContent = ready
+      ? target.label
+      : `${target.label} - only the tab in front`;
+    if (!ready && el.format.value === target.id) el.format.value = "single";
+  }
+
+  // The address of the tab in front, asked for once and whenever it might
+  // have changed, so the printed entry knows whether it can be offered.
+  async function lookAtTab() {
+    try {
+      const answer = await browser.runtime.sendMessage({ type: "active-url" });
+      inFront = (answer && answer.url) || "";
+    } catch (e) {
+      inFront = "";
+    }
+    paintPrintable();
   }
 
   function fillScopes() {
@@ -225,6 +253,23 @@
       return;
     }
 
+    // Handed straight to Firefox, which opens its own save dialog. Nothing is
+    // fetched, nothing is parsed, and no permission is needed: it is printing
+    // a page it is already showing.
+    if (target.encoder === "print") {
+      const answer = await browser.runtime.sendMessage({ type: "print-pdf", url })
+        .catch(() => null);
+      if (!answer || !answer.ok) {
+        CTAMessages.say(answer && answer.reason === "not-in-front"
+          ? "Firefox can only print the page it is showing. Open that page in "
+            + "front, or use the text layout."
+          : "Firefox would not print that page.", true);
+        return;
+      }
+      CTAMessages.say("Firefox is saving the page it is showing.");
+      return;
+    }
+
     // Nothing may be awaited before this: the grant has to happen inside the
     // click that asked for it.
     let granted = false;
@@ -282,7 +327,9 @@
       return;
     }
     el.url.value = answer.url;
+    inFront = answer.url;
     paintPrefixes();
+    paintPrintable();
     el.selection.textContent = answer.title
       ? `From: ${answer.title}`
       : `From: ${answer.url}`;
@@ -315,8 +362,10 @@
 
     el.url.addEventListener("change", () => {
       paintPrefixes();
+      paintPrintable();
       el.selection.textContent = placeholder;
     });
+    el.url.addEventListener("input", paintPrintable);
     el.detect.addEventListener("click", () => detect().catch(() => {}));
     el.save.addEventListener("click", () => start().catch(() => {}));
     el.cancel.addEventListener("click", () => { stop = true; });
@@ -326,6 +375,7 @@
 
     busy(false);
     setProgress("");
+    lookAtTab().catch(() => {});
   }
 
   // The address of a page, from wherever the app was told to look.

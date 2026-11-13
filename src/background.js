@@ -157,6 +157,19 @@ async function openUrl(msg) {
   await browser.windows.update(win.id, { focused: true });
 }
 
+// Firefox prints the tab that is active in the window that is in front, and
+// takes no tab id. The app is a popup, so the browser window has to be raised
+// first or the add-on would print itself.
+async function printPdf(msg) {
+  const win = await normalWindow();
+  if (!win) return { ok: false, reason: "no-window" };
+  const [tab] = await browser.tabs.query({ active: true, windowId: win.id });
+  if (!tab || tab.url !== msg.url) return { ok: false, reason: "not-in-front" };
+  await browser.windows.update(win.id, { focused: true });
+  const status = await browser.tabs.saveAsPDF({});
+  return { ok: status !== "not_saved", status };
+}
+
 browser.runtime.onMessage.addListener((msg, sender) => {
   switch (msg && msg.type) {
     case "open-app":
@@ -167,5 +180,7 @@ browser.runtime.onMessage.addListener((msg, sender) => {
       return Promise.resolve(view);
     case "active-url":
       return activeUrl();
+    case "print-pdf":
+      return printPdf(msg);
   }
 });

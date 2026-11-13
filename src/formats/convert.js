@@ -26,7 +26,11 @@
     { id: "gif", label: "GIF", mime: "image/gif", ext: "gif", encoder: null },
     { id: "bmp", label: "BMP", mime: "image/bmp", ext: "bmp", encoder: "canvas",
       opaque: true },
-    { id: "ico", label: "ICO", mime: "image/x-icon", ext: "ico", encoder: "ico" }
+    { id: "ico", label: "ICO", mime: "image/x-icon", ext: "ico", encoder: "ico" },
+    // A page, not a picture: one image to a page, cut to its size. The canvas
+    // is filled first because a PDF image has no alpha channel here.
+    { id: "pdf", label: "PDF", mime: "application/pdf", ext: "pdf",
+      encoder: "pdf", opaque: true }
   ];
 
   const ALIASES = { jpg: "jpeg", jpe: "jpeg", jfif: "jpeg" };
@@ -231,6 +235,35 @@
       width, height };
   }
 
+  // A JPEG already carries the compression a PDF would use, so when nothing is
+  // being changed it goes in untouched rather than decoded and deflated. That
+  // is both smaller and lossless.
+  async function toPdf(picture, area, options) {
+    const untouched = !options.crop && !options.resize
+      && sameFormat(options.name || options.url, "jpeg");
+    if (untouched) {
+      const response = await fetch(options.url);
+      if (!response.ok) throw new Error(`the server answered ${response.status}`);
+      const bytes = new Uint8Array(await response.arrayBuffer());
+      return { blob: await CTAPdf.fromImages([{ bytes, mime: "image/jpeg",
+        width: picture.width, height: picture.height }]),
+      width: picture.width, height: picture.height };
+    }
+    const canvas = draw(picture, area, true);
+    const pixels = canvas.getContext("2d")
+      .getImageData(0, 0, area.width, area.height).data;
+    // Three bytes a pixel: the alpha is already flattened onto white.
+    const rgb = new Uint8Array(area.width * area.height * 3);
+    for (let i = 0, out = 0; i < pixels.length; i += 4, out += 3) {
+      rgb[out] = pixels[i];
+      rgb[out + 1] = pixels[i + 1];
+      rgb[out + 2] = pixels[i + 2];
+    }
+    return { blob: await CTAPdf.fromImages([{ bytes: rgb, mime: "image/rgb",
+      width: area.width, height: area.height }]),
+    width: area.width, height: area.height };
+  }
+
   // The whole picture kept, and only the metadata taken out. Nothing is
   // decoded and nothing is re-encoded, so the result is the same photograph,
   // not a copy of it.
@@ -273,10 +306,15 @@
     const picture = await pictureFrom(options.url);
     try {
       const area = plan(picture, options);
-      const made = target.encoder === "ico"
-        ? await toIco(picture, area)
-        : { blob: await toBlob(draw(picture, area, target.opaque), target.mime),
+      let made = null;
+      if (target.encoder === "ico") {
+        made = await toIco(picture, area);
+      } else if (target.encoder === "pdf") {
+        made = await toPdf(picture, area, options);
+      } else {
+        made = { blob: await toBlob(draw(picture, area, target.opaque), target.mime),
           width: area.width, height: area.height };
+      }
       return {
         url: URL.createObjectURL(made.blob),
         format: target,
