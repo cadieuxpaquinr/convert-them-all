@@ -54,6 +54,21 @@ Pick an audio file, or drop one. Firefox decodes mp3, wav, flac, ogg, opus, m4a 
 A browser has no audio encoder but MediaRecorder, which writes Opus alone and in real
 time. WAV is written from the decoded samples instead, which is instant and exact.
 
+### Archives
+
+Open a zip, a tar or a tar.gz and it lists what is inside with a tick each, sizes and
+all. Nothing is written until you press **Extract ticked**: an archive can hold hundreds
+of files, and each one saved is a download of its own. Packer leavings such as
+`__MACOSX/` and `.DS_Store` start unticked.
+
+Packing works the same way in reverse: choose files, or tick what is already open, and
+write a **zip**, a **tar** or a **tar.gz**. That is also how one format becomes another.
+
+Firefox does the compression itself through `CompressionStream`, so there is nothing
+bundled. A name inside an archive comes from whoever made it, so every path is rebuilt
+from safe parts: an entry calling itself `../../etc/passwd` lands inside the folder with
+everything else.
+
 ### Websites
 
 Beta. Paste an address or detect the page in front, and save it as a **single
@@ -138,20 +153,15 @@ off it is.
 
 **The browser can already do these**
 
-- **Archives**: zip and tar.gz, made and read. Firefox does deflate and gzip itself
-  through `CompressionStream`, measured and exact, so only the container has to be
-  written.
 - **Zip a saved website** instead of a tree of folders, which is the same writer pointed
   at the Websites pane.
 - **Sheets**: xlsx and ods to csv, and back. Both are a zip full of XML, so they ride on
   the archive reader and the parser the Websites pane already uses.
-- **PDF out**: images to a PDF, and a saved page to a PDF.
 - **Documents**: Markdown, HTML and docx between each other, and a saved website section
   as one EPUB. docx and EPUB are a zip full of XML as well.
 - **Batch, and whole pages**: convert many files in one go, drop a folder, and a
   "Convert every image on this page" entry on the context menu. This is a change to how
   the app works rather than another format, and it is the one that earns the name.
-- **Images, deeper**: resize, crop, strip EXIF, and SVG to PNG.
 
 **These need the helper and ffmpeg**
 

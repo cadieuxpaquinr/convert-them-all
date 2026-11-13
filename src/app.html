@@ -153,6 +153,19 @@
     #site-saved { max-height: 180px; overflow: auto; padding: 8px; margin: 6px 0 0;
       background: var(--field-bg); border: 1px solid var(--line); border-radius: 6px;
       font: 11px ui-monospace, monospace; white-space: pre-wrap; word-break: break-all; }
+    .entries { max-height: 260px; overflow-y: auto; border: 1px solid var(--line);
+      border-radius: 6px; background: var(--panel); padding: 4px 8px; }
+    .entries label { display: flex; align-items: center; gap: 8px; margin: 0;
+      padding: 3px 0; font-size: 12px; }
+    .entries input { margin: 0; accent-color: var(--accent); }
+    .entries .path { flex: 1; min-width: 0; word-break: break-all; }
+    .entries .size { color: var(--muted); font: 11px ui-monospace, monospace; }
+    .entries .folder { color: var(--muted); }
+    .entries p { color: var(--muted); font-size: 12px; margin: 6px 0; }
+    #archive-name { width: 100%; max-width: 220px; margin-top: 6px; }
+    #archive-format { padding: 5px; font: inherit; color: inherit;
+      background: var(--field-bg); border: 1px solid var(--field-border);
+      border-radius: 6px; }
     .facts { margin: 0; font-size: 12px; color: var(--muted); }
     .facts div { display: flex; gap: 8px; padding: 3px 0;
       border-bottom: 1px solid var(--line); }
@@ -235,6 +248,7 @@
       <button data-section="images">Images</button>
       <button data-section="videos">Videos</button>
       <button data-section="audio">Audio</button>
+      <button data-section="archives">Archives</button>
       <button data-section="websites">Websites</button>
       <button data-section="files">Files</button>
     </div>
@@ -439,6 +453,48 @@
       </div>
     </section>
 
+    <section id="archives" hidden>
+      <h1>Archives</h1>
+      <p id="archive-selection" class="media-selection">Open a zip, a tar or a
+        tar.gz, or drop one on this window. Nothing is written until you ask.</p>
+      <div class="row">
+        <button id="pick-archive">Choose an archive&hellip;</button>
+        <input type="file" id="archive-file" hidden>
+        <button id="pick-into">Choose files to pack&hellip;</button>
+        <input type="file" id="into-file" multiple hidden>
+      </div>
+
+      <div class="columns">
+        <div>
+          <h2>What is in it</h2>
+          <div id="archive-list" class="entries"></div>
+          <div class="row">
+            <button id="archive-all">Tick all</button>
+            <button id="archive-none">Tick none</button>
+          </div>
+        </div>
+
+        <div>
+          <h2>Take it apart</h2>
+          <div class="row">
+            <button id="archive-extract" class="primary">Extract ticked</button>
+          </div>
+          <p class="hint">Files land under Downloads, in a folder named after
+            the archive.</p>
+
+          <h2>Put it together</h2>
+          <label class="field"><span>As</span>
+            <select id="archive-format"></select></label>
+          <input id="archive-name" type="text" placeholder="archive">
+          <div class="row">
+            <button id="archive-pack">Pack the ticked ones</button>
+          </div>
+          <p class="hint">Packing what you ticked makes a new archive, which is
+            also how one format becomes another.</p>
+        </div>
+      </div>
+    </section>
+
     <section id="websites" hidden>
       <h1>Websites</h1>
 
@@ -617,6 +673,8 @@
   <script src="formats/convert.js"></script>
   <script src="formats/jpegmeta.js"></script>
   <script src="formats/pdf.js"></script>
+  <script src="formats/zip.js"></script>
+  <script src="formats/tar.js"></script>
   <script src="platform/native.js"></script>
   <script src="platform/readiness.js"></script>
   <script src="formats/videoformat.js"></script>
@@ -637,6 +695,7 @@
   <script src="formats/webconvert.js"></script>
   <script src="panes/files.js"></script>
   <script src="panes/audio.js"></script>
+  <script src="panes/archives.js"></script>
   <script src="panes/websites.js"></script>
   <script src="panes/home.js"></script>
   <script src="app.js"></script>
