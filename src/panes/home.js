@@ -67,12 +67,15 @@
     el.tools.textContent = "";
     for (const row of answer.rows) el.tools.appendChild(drawRow(row));
     // Said once, under the list, rather than twice over in two rows that can
-    // only report the same absence.
-    el.helper.textContent = answer.helper
-      ? `${answer.helper.text} Run the installer from the add-on folder: `
-        + `${answer.helper.command}. ${answer.helper.note}`
-      : "";
+    // only report the same absence. There is no command here: the setup lives
+    // behind the button, on the project's own page.
+    el.helper.textContent = "";
+    el.helperSetup.hidden = !answer.helper;
     el.helper.hidden = !answer.helper;
+    if (!answer.helper) return;
+    el.helper.textContent = answer.helper.text;
+    el.helperSetup.textContent = answer.helper.link.text;
+    el.helperSetup.onclick = () => open(answer.helper.link.url);
   }
 
   function waiting() {
@@ -84,6 +87,7 @@
     item.append(mark("unknown"), what);
     el.tools.appendChild(item);
     el.helper.hidden = true;
+    el.helperSetup.hidden = true;
   }
 
   async function paint(report) {
@@ -124,6 +128,7 @@
   function mount() {
     el.tools = document.getElementById("home-tools");
     el.helper = document.getElementById("home-helper");
+    el.helperSetup = document.getElementById("home-setup");
     el.accessMark = document.querySelector("#home-access .mark");
     el.accessDetail = document.getElementById("access-detail");
     el.accessActions = document.getElementById("access-actions");

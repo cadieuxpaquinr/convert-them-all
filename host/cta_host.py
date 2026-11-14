@@ -10,7 +10,12 @@ of UTF-8 JSON.
 
 This file answers questions about the machine. It reports what it found; the
 add-on decides what to say about it, because only the add-on knows which
-platform's wording and commands to show.
+platform's wording to show.
+
+Every request may carry a tools object naming where yt-dlp and ffmpeg are. The
+add-on offers that because a program downloaded from its own site lands in
+Downloads and is not on the PATH, where this would otherwise be the only place
+it looked.
 """
 
 import json
@@ -30,7 +35,7 @@ from pathlib import Path
 # Raised when the add-on needs something this file does not yet do, so an old
 # helper left behind by an earlier install is told to update rather than
 # failing in a way nobody can read.
-HOST_VERSION = 4
+HOST_VERSION = 5
 
 TOOL_TIMEOUT = 15
 
@@ -100,9 +105,33 @@ def run(command):
     )
 
 
-def tool(name, args, pick):
+def given(paths, name):
+    """A path the user set in Settings, when it is really there.
+
+    A downloaded yt-dlp.exe sits in Downloads and is not on the PATH, so the
+    add-on offers somewhere to say where it is. Anything that is not an
+    existing file is ignored rather than refused: the PATH may still have one,
+    and a stale setting should not break what works.
+    """
+    # The program is called yt-dlp and the setting is called ytdlp. Asking for
+    # both spellings keeps one dash from quietly undoing the whole feature,
+    # which is what it did the first time.
+    table = paths or {}
+    wanted = table.get(name) or table.get(name.replace("-", ""))
+    if not wanted:
+        return None
+    place = Path(str(wanted)).expanduser()
+    return str(place) if place.is_file() else None
+
+
+def locate(name, paths=None):
+    """Where a program is: what the user said first, then the PATH."""
+    return given(paths, name) or shutil.which(name)
+
+
+def tool(name, args, pick, paths=None):
     """Where a tool is and which version it is, or why it is not usable."""
-    path = shutil.which(name)
+    path = locate(name, paths)
     if not path:
         return {"found": False}
     try:
@@ -110,7 +139,8 @@ def tool(name, args, pick):
     except (OSError, subprocess.SubprocessError) as error:
         return {"found": True, "path": path, "broken": str(error)}
     text = result.stdout.strip() or result.stderr.strip()
-    return {"found": True, "path": path, "version": pick(text)}
+    return {"found": True, "path": path, "version": pick(text),
+            "configured": bool(given(paths, name))}
 
 
 def first_word_after(text, marker):
@@ -250,14 +280,19 @@ def folder_state(path):
     return state
 
 
-def ytdlp_report():
-    found = tool("yt-dlp", ["--version"], lambda text: text.splitlines()[0].strip())
+def ytdlp_report(paths=None):
+    found = tool("yt-dlp", ["--version"],
+                 lambda text: text.splitlines()[0].strip(), paths)
     if found.get("found"):
         found["install"] = install_kind(found.get("path"))
+        # A file the user pointed at updates itself or is replaced by hand;
+        # whatever package manager is on the machine did not put it there.
+        if found.get("configured"):
+            found["install"] = "self"
     return found
 
 
-def report():
+def report(paths=None):
     return {
         "type": "report",
         "host": HOST_VERSION,
@@ -265,8 +300,9 @@ def report():
         "machine": platform.machine(),
         "python": platform.python_version(),
         "home": str(Path.home()),
-        "ytdlp": ytdlp_report(),
-        "ffmpeg": tool("ffmpeg", ["-version"], lambda text: first_word_after(text, "version")),
+        "ytdlp": ytdlp_report(paths),
+        "ffmpeg": tool("ffmpeg", ["-version"],
+                       lambda text: first_word_after(text, "version"), paths),
         "jsruntime": js_runtime(),
         "releases": releases(),
         "downloads": folder_state(downloads_folder()),
@@ -366,7 +402,7 @@ def probe(message):
         return {"type": "error", "reason": "bad-url",
                 "detail": "Only http and https addresses can be read."}
 
-    ytdlp = shutil.which("yt-dlp")
+    ytdlp = locate("yt-dlp", message.get("tools"))
     if not ytdlp:
         return {"type": "error", "reason": "no-ytdlp",
                 "detail": "yt-dlp is not installed, or not on the PATH."}
@@ -426,7 +462,8 @@ def download(message):
     if problem:
         return {"type": "error", "reason": "bad-folder", "detail": problem}
 
-    ytdlp = shutil.which("yt-dlp")
+    paths = message.get("tools")
+    ytdlp = locate("yt-dlp", paths)
     if not ytdlp:
         return {"type": "error", "reason": "no-ytdlp",
                 "detail": "yt-dlp is not installed, or not on the PATH."}
@@ -453,6 +490,13 @@ def download(message):
         + "%(progress._percent_str)s|%(progress._speed_str)s|%(progress._eta_str)s",
         "--print", "after_move:" + FILE_MARK + "%(filepath)s",
     ]
+
+    # An ffmpeg the user pointed at is not on the PATH either, so yt-dlp
+    # cannot see it unless it is told. Without this, setting both paths would
+    # still fail to merge a video, which is the mystery this is meant to end.
+    ffmpeg = given(paths, "ffmpeg")
+    if ffmpeg:
+        command += ["--ffmpeg-location", ffmpeg]
 
     runtime = js_runtime()
     if runtime["found"] and runtime["name"] != "deno":
@@ -512,7 +556,7 @@ def download(message):
 def handle(message):
     kind = message.get("type") if isinstance(message, dict) else None
     if kind == "ping":
-        return report()
+        return report(message.get("tools"))
     if kind == "check-folder":
         return {"type": "folder", **folder_state(message.get("path", ""))}
     if kind == "download":

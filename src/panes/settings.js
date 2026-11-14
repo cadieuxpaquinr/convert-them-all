@@ -218,6 +218,33 @@
       folderField.value = await CTAFolder.read();
     }
 
+    const ytdlpField = document.getElementById("ytdlp-path");
+    const ffmpegField = document.getElementById("ffmpeg-path");
+
+    // Saved without checking: the helper is the one that has to run these,
+    // and it says in the Videos pane and on the home page whether it found
+    // them. Checking here as well would be the same answer, twice, from the
+    // place with less to say about it.
+    document.getElementById("tools-save").addEventListener("click", async () => {
+      await CTATools.save({ ytdlp: ytdlpField.value, ffmpeg: ffmpegField.value });
+      await loadTools();
+      setStatus(ytdlpField.value || ffmpegField.value
+        ? "Saved. Press Check again on the home page to see what was found."
+        : "Looking on the PATH again.");
+    });
+
+    document.getElementById("tools-clear").addEventListener("click", async () => {
+      await CTATools.clear();
+      await loadTools();
+      setStatus("Looking on the PATH again.");
+    });
+
+    async function loadTools() {
+      const paths = await CTATools.read();
+      ytdlpField.value = paths.ytdlp;
+      ffmpegField.value = paths.ffmpeg;
+    }
+
     const allSites = document.getElementById("all-sites");
     const dialog = document.getElementById("sites-dialog");
     const sitesCount = document.getElementById("sites-count");
@@ -312,6 +339,7 @@
       .catch(() => {})
       .then(loadShortcut)
       .catch(() => setStatus("Could not read the current shortcut.", true));
+    loadTools().catch(() => {});
 
     loadGeometry().catch(() => {});
     loadTheme().catch(() => {});

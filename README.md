@@ -44,9 +44,10 @@ browser, because an add-on cannot run a program itself.
 - Skip sponsored segments, through [SponsorBlock](https://sponsor.ajay.app). YouTube only,
   and off by default.
 
-The pane checks what the machine can do and says exactly what to install. yt-dlp one
-release behind is a warning; two behind holds video downloads shut, because a copy that
-old fails on many sites in ways that look like a fault here.
+The pane checks what the machine can do and links to whatever is missing. It never asks
+you to run an installer: the only command it will ever show you is how to update a yt-dlp
+you already have. One release behind is a warning; two behind holds video downloads shut,
+because a copy that old fails on many sites in ways that look like a fault here.
 
 ### Audio
 
@@ -125,8 +126,8 @@ yet: archives and spreadsheets are what this section is waiting for.
   keeps the last ten.
 - **A home page that sets the app up**: what is installed, what to install, and the
   optional all-sites permission, which can be given there and taken back in Settings.
-- **Settings** for the shortcut, the app window's size and position, the download folder
-  and the theme.
+- **Settings** for the shortcut, the app window's size and position, the download folder,
+  where yt-dlp and ffmpeg are if they are not on your PATH, and the theme.
 
 ## Install
 
@@ -138,17 +139,32 @@ The add-on is not published yet, so load it from source:
 
 Firefox removes a temporary add-on when it closes.
 
-**For video downloads only**, install the helper and its dependencies:
+### For video downloads only
+
+Three things, and the app never asks you to run any of them: it links to the first two
+and tells you what it found.
+
+1. **[yt-dlp](https://github.com/yt-dlp/yt-dlp#installation)**, which reads a video out
+   of a web page.
+2. **[ffmpeg](https://ffmpeg.org/download.html)**, for sites that send the picture and
+   the sound separately. YouTube is one.
+3. **The helper**, a small Python program that runs yt-dlp for the add-on, because an
+   add-on cannot run a program itself. This is the one-time setup:
 
 ```sh
 ./host/install.sh                                              # Linux and macOS
 powershell -ExecutionPolicy Bypass -File host\install.ps1      # Windows
 ```
 
-The helper needs Python, yt-dlp, and ffmpeg for sites that send picture and sound
-separately. The app's home page names the exact command for your system. A Firefox
-installed as a snap cannot reach programs outside its confinement, so the helper will not
-work there.
+**Where the first two live.** The helper looks on your PATH, which is the best place to
+put them. If you would rather not, Settings has a **Programs** block: give the full path
+to each file and the add-on hands it to the helper, and to yt-dlp through
+`--ffmpeg-location`. A yt-dlp.exe sitting in Downloads works that way without touching
+your PATH.
+
+The home page lists what was found and what is missing, and says which of the two it
+used. A Firefox installed as a snap cannot reach programs outside its confinement, so
+the helper will not work there.
 
 ## Permissions
 

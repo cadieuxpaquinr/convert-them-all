@@ -166,7 +166,9 @@
     if (!url || blocked) return;
     el.offers.textContent = "Reading what this video offers…";
     el.offers.hidden = false;
-    const answer = await CTANative.ask({ type: "probe", url }, 70000);
+    const tools = await CTATools.forRequest().catch(() => null);
+    const answer = await CTANative.ask(
+      tools ? { type: "probe", url, tools } : { type: "probe", url }, 70000);
     probed = answer && answer.type === "formats" ? answer : null;
     renderOptions();
   }
@@ -182,8 +184,12 @@
     el.progress.textContent = "Starting…";
 
     const directory = await CTAFolder.read().catch(() => "");
+    const tools = await CTATools.forRequest().catch(() => null);
+    const request = { type: "download", url, directory,
+      format: CTAVideoFormat.intent(choice) };
+    if (tools) request.tools = tools;
     const result = await CTANative.job(
-      { type: "download", url, directory, format: CTAVideoFormat.intent(choice) },
+      request,
       (step) => {
         el.progress.textContent =
           `${step.percent || ""} at ${step.speed || "?"}, ${step.eta || "?"} left`;

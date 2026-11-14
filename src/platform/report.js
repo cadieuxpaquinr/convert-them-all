@@ -23,14 +23,21 @@
     return answer;
   }
 
+  // The paths from Settings ride along, because the helper looks on the PATH
+  // and a program downloaded from its own site is not on it.
+  async function ask() {
+    const tools = await CTATools.forRequest().catch(() => null);
+    return await CTANative.ask(tools ? { type: "ping", tools } : { type: "ping" });
+  }
+
   function get() {
-    if (!pending) pending = CTANative.ping();
+    if (!pending) pending = ask();
     return pending;
   }
 
   // A new look at the machine, for when the user has just installed something.
   function refresh() {
-    pending = CTANative.ping().then(tell);
+    pending = ask().then(tell);
     return pending;
   }
 

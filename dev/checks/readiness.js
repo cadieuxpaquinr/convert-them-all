@@ -2,14 +2,15 @@ const ROOT = require("path").resolve(__dirname, "../..");
 global.window = {};
 require(`${ROOT}/src/platform/readiness.js`);
 const R = window.CTAReady;
+
 let bad = 0;
 const is = (n, got, want) => {
   const ok = JSON.stringify(got) === JSON.stringify(want);
   if (!ok) bad++;
-  console.log(`${ok ? "ok  " : "FAIL"} ${n}: ${JSON.stringify(got)}`);
+  console.log(`${ok ? "ok  " : "FAIL"} ${n}: ${JSON.stringify(got)}${ok ? "" : "\n     want " + JSON.stringify(want)}`);
 };
 const base = (over) => Object.assign({
-  type: "report", host: 4,
+  type: "report", host: R.NEEDS_HOST,
   ytdlp: { found: true, version: "2026.10.26", install: "self" },
   ffmpeg: { found: true, version: "8.0.1" },
   jsruntime: { found: true, name: "node" },
@@ -17,18 +18,32 @@ const base = (over) => Object.assign({
   releases: { tags: ["2026.10.26", "2026.10.21", "2026.08.19", "2026.07.04"] }
 }, over || {});
 
-// No helper at all.
+// The rule this whole change exists for: the app asks nobody to run an
+// installer. Only updating a yt-dlp that is already there keeps a command.
+const INSTALLERS = /install|apt|brew|winget|pipx|\.sh|\.ps1|powershell/i;
+function noInstallCommands(name, thing) {
+  const commands = [];
+  if (thing.rows) for (const row of thing.rows) if (row.command) commands.push(row.command);
+  if (thing.steps) for (const step of thing.steps) if (step.command) commands.push(step.command);
+  if (thing.helper && thing.helper.command) commands.push(thing.helper.command);
+  const offending = commands.filter((c) => INSTALLERS.test(c) && !/^sudo apt install --only-upgrade|upgrade/.test(c));
+  is(name, offending, []);
+}
+
+// No helper at all: the rows cannot say anything, and the way out is a link.
 let t = R.tools(null, "linux");
 is("both unknown", t.rows.map((r) => r.mark), ["unknown", "unknown"]);
-is("helper named", t.helper.command, "./host/install.sh");
-is("helper reason", t.helper.text.includes("not installed"), true);
+is("but each still offers its download",
+  t.rows.map((r) => r.link.text), ["Get yt-dlp", "Get ffmpeg"]);
+is("the helper note points at the setup page", t.helper.link.url, R.SETUP_DOCS);
+is("and says why there is nothing to report",
+  t.helper.text.includes("one-time setup"), true);
+noInstallCommands("no installer is suggested anywhere", t);
 
-// A helper too old to describe anything.
-t = R.tools({ type: "report", host: 2 }, "win");
-is("outdated helper is unknown too", t.rows[0].mark, "unknown");
-is("windows helper command", t.helper.command,
-  "powershell -ExecutionPolicy Bypass -File host\\install.ps1");
-is("outdated reason", t.helper.text.includes("out of date"), true);
+t = R.tools({ type: "report", host: 1 }, "win");
+is("an old helper is unknown too", t.rows[0].mark, "unknown");
+is("and is pointed at the same page", t.helper.link.url, R.SETUP_DOCS);
+noInstallCommands("nor for an old helper", t);
 
 // Everything current.
 t = R.tools(base(), "linux");
@@ -36,53 +51,108 @@ is("no helper note", t.helper, null);
 is("ytdlp ok", [t.rows[0].mark, t.rows[0].detail], ["ok", "2026.10.26, current."]);
 is("ffmpeg ok", [t.rows[1].mark, t.rows[1].detail], ["ok", "8.0.1."]);
 is("nothing to run", [t.rows[0].command, t.rows[1].command], ["", ""]);
+is("and nothing to press", [t.rows[0].link, t.rows[1].link], [null, null]);
 
-// yt-dlp missing.
-t = R.tools(base({ ytdlp: { found: false } }), "linux");
+// A program found at a path the user set says so.
+t = R.tools(base({
+  ytdlp: { found: true, version: "2026.10.26", install: "self", configured: true },
+  ffmpeg: { found: true, version: "8.0.1", configured: true }
+}), "win");
+is("yt-dlp names where it came from", t.rows[0].detail,
+  "2026.10.26, current, from the path you set.");
+is("and so does ffmpeg", t.rows[1].detail, "8.0.1, from the path you set.");
+
+// Missing: a link, and a word about the PATH, and no command.
+t = R.tools(base({ ytdlp: { found: false } }), "win");
 is("missing is bad", t.rows[0].mark, "bad");
-is("install command", t.rows[0].command, "sudo apt install yt-dlp");
-is("link offered", t.rows[0].link, { text: "Get yt-dlp", url: R.YTDLP_DOCS });
+is("with no command", t.rows[0].command, "");
+is("a link instead", t.rows[0].link, { text: "Get yt-dlp", url: R.YTDLP_DOCS });
+is("and it says where to put it", t.rows[0].detail.includes("PATH"), true);
+is("naming Settings as the other way",
+  t.rows[0].detail.includes("Settings"), true);
+noInstallCommands("still no installer", t);
 
-// yt-dlp present but will not run.
-t = R.tools(base({ ytdlp: { found: true, broken: "exit code 1" } }), "mac");
-is("broken is bad", t.rows[0].mark, "bad");
-is("broken says why", t.rows[0].detail.includes("exit code 1"), true);
-is("mac command", t.rows[0].command, "brew install yt-dlp");
+t = R.tools(base({ ffmpeg: { found: false } }), "mac");
+is("ffmpeg missing warns", t.rows[1].mark, "old");
+is("with its own link", t.rows[1].link, { text: "Get ffmpeg", url: R.FFMPEG_DOCS });
+is("and no command", t.rows[1].command, "");
 
-// One release behind: present, older, still sufficient.
-t = R.tools(base({ ytdlp: { found: true, version: "2026.10.21", install: "self" } }), "linux");
-is("one behind is old, not bad", t.rows[0].mark, "old");
-is("says it still works", t.rows[0].detail.includes("still works"), true);
-is("the right updater", t.rows[0].command, "yt-dlp -U");
-
-// Two behind: held shut.
-t = R.tools(base({ ytdlp: { found: true, version: "2026.08.19", install: "pipx" } }), "linux");
+// Behind: the one place a command survives, and the right one for how it
+// was installed.
+t = R.tools(base({ ytdlp: { found: true, version: "2026.10.21", install: "self" } }),
+  "linux");
+is("one behind is old", t.rows[0].mark, "old");
+is("and keeps its update command", t.rows[0].command, "yt-dlp -U");
+is("with a link beside it", t.rows[0].link.text, "Update yt-dlp");
+t = R.tools(base({ ytdlp: { found: true, version: "2026.08.19", install: "pipx" } }),
+  "linux");
 is("two behind is bad", t.rows[0].mark, "bad");
-is("says downloads are shut", t.rows[0].detail.includes("stay shut"), true);
-is("pipx updater", t.rows[0].command, "pipx upgrade yt-dlp");
+is("and pipx is named", t.rows[0].command, "pipx upgrade yt-dlp");
+t = R.tools(base({ ytdlp: { found: true, version: "2019.01.01", install: "system" } }),
+  "win");
+is("a system install updates with winget on windows",
+  t.rows[0].command, "winget upgrade yt-dlp.yt-dlp");
 
-// A version the list has never heard of.
-t = R.tools(base({ ytdlp: { found: true, version: "2019.01.01", install: "system" } }), "win");
-is("unknown version counts as far behind", t.rows[0].mark, "bad");
-is("winget updater for a system install", t.rows[0].command, "winget upgrade yt-dlp.yt-dlp");
+// check(), which is what the Videos pane shows.
+let s = R.check(null, "linux");
+is("no helper blocks", [s.id, s.blocking], ["no-helper", true]);
+is("and offers the setup page", s.link.url, R.SETUP_DOCS);
+is("with no steps to follow", s.steps, []);
+noInstallCommands("the videos pane asks for no installer either", s);
 
-// No release list, and an old copy.
-t = R.tools(base({ releases: { tags: [] },
-  ytdlp: { found: true, version: "2024.01.01", install: "pip" } }), "linux");
-is("old with no list is old", t.rows[0].mark, "old");
-is("says the list is missing", t.rows[0].detail.includes("could not be"), true);
-is("pip updater", t.rows[0].command, "python3 -m pip install -U yt-dlp");
+s = R.check({ type: "report", host: 2 }, "linux");
+is("an old helper blocks", s.id, "helper-outdated");
+is("and says what version is needed", s.detail.includes(String(R.NEEDS_HOST)), true);
+is("pointing at the setup page", s.link.url, R.SETUP_DOCS);
 
-// No release list, and a copy from today: nothing to say.
-const today = new Date().toISOString().slice(0, 10).replace(/-/g, ".");
-t = R.tools(base({ releases: { tags: [] },
-  ytdlp: { found: true, version: today, install: "self" } }), "linux");
-is("fresh with no list is ok", [t.rows[0].mark, t.rows[0].detail], ["ok", `${today}.`]);
+s = R.check({ type: "error", detail: "it broke" }, "linux");
+is("a broken helper blocks", s.id, "helper-broken");
+is("and shows what it said", s.detail, "it broke");
 
-// ffmpeg missing warns, and never blocks.
-t = R.tools(base({ ffmpeg: { found: false } }), "win");
-is("ffmpeg missing is old", t.rows[1].mark, "old");
-is("windows ffmpeg command", t.rows[1].command, "winget install Gyan.FFmpeg");
-is("ffmpeg link", t.rows[1].link, { text: "Get ffmpeg", url: R.FFMPEG_DOCS });
-is("yt-dlp unaffected", t.rows[0].mark, "ok");
+s = R.check(base({ ytdlp: { found: false } }), "linux");
+is("no yt-dlp blocks", [s.id, s.blocking], ["no-ytdlp", true]);
+is("with a link", s.link.text, "Get yt-dlp");
+is("and no steps", s.steps, []);
+
+s = R.check(base({ ytdlp: { found: true, broken: "exit 1" } }), "linux");
+is("a broken yt-dlp blocks", s.id, "ytdlp-broken");
+is("and shows why", s.detail, "exit 1");
+
+s = R.check(base({ ytdlp: { found: true, version: "2026.08.19", install: "self" } }),
+  "linux");
+is("two behind still blocks", [s.id, s.blocking], ["ytdlp-expired", true]);
+is("and keeps the update command", s.steps[0].command, "yt-dlp -U");
+
+s = R.check(base({ ffmpeg: { found: false } }), "linux");
+is("no ffmpeg warns without blocking", [s.id, s.blocking], ["no-ffmpeg", false]);
+is("and links to it", s.link.text, "Get ffmpeg");
+
+s = R.check(base({ jsruntime: { found: false } }), "linux");
+is("no runtime warns", [s.id, s.blocking], ["no-jsruntime", false]);
+is("and links to node", s.link.url, R.RUNTIME_DOCS);
+
+s = R.check(base({ downloads: { path: "/nope", exists: false } }), "linux");
+is("a missing folder blocks", s.id, "no-folder");
+is("and says where to fix it", s.steps[0].text.includes("Settings"), true);
+
+s = R.check(base(), "linux");
+is("everything in place is ready", [s.id, s.ready, s.blocking],
+  ["ready", true, false]);
+is("and reads as a summary",
+  s.detail, "yt-dlp 2026.10.26, ffmpeg 8.0.1, node. Saving to /home/x/Downloads.");
+
+// The updaters themselves, unchanged.
+is("a self-updating copy", R.updateCommand("self", "linux"), "yt-dlp -U");
+is("pip on windows", R.updateCommand("pip", "win"), "py -m pip install -U yt-dlp");
+is("brew", R.updateCommand("brew", "mac"), "brew upgrade yt-dlp");
+is("an unknown install falls back to the platform's",
+  R.updateCommand("mystery", "win"), "winget upgrade yt-dlp.yt-dlp");
+
+// Where the installed version sits.
+is("the newest is zero behind",
+  R.releasesBehind("2026.10.26", ["2026.10.26", "2026.10.21"]), 0);
+is("one behind", R.releasesBehind("2026.10.21", ["2026.10.26", "2026.10.21"]), 1);
+is("unknown to the list is as far behind as the list is long",
+  R.releasesBehind("2019.01.01", ["2026.10.26", "2026.10.21"]), 2);
+is("no list, no answer", R.releasesBehind("2026.10.26", []), null);
 process.exit(bad ? 1 : 0);

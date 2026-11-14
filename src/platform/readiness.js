@@ -15,7 +15,7 @@
   // Must match HOST_VERSION in host/cta_host.py. It sat at 2 while the helper
   // had moved to 3, so a helper left behind by an older install counted as
   // current and then refused every probe as an unknown request.
-  const NEEDS_HOST = 4;
+  const NEEDS_HOST = 5;
 
   // Counted in releases, not in days: yt-dlp shipped on 4 July, 19 August,
   // 21 October and 26 October, so days since a release say nothing about being
@@ -29,37 +29,34 @@
   const BLIND_SUGGEST_DAYS = 90;
 
   // The projects' own pages, which outlive any package name written down here.
+  // Nobody installs an add-on and then runs a command it printed at them, so
+  // the app links to these and never asks for a shell. The one-time setup of
+  // the helper itself lives in the project's own readme, behind a link, for
+  // whoever is willing.
   const YTDLP_DOCS = "https://github.com/yt-dlp/yt-dlp#installation";
   const FFMPEG_DOCS = "https://ffmpeg.org/download.html";
+  const RUNTIME_DOCS = "https://nodejs.org/en/download";
+  const SETUP_DOCS =
+    "https://github.com/cadieuxpaquinr/convert-them-all#install";
 
+  const GET_YTDLP = { text: "Get yt-dlp", url: YTDLP_DOCS };
+  const UPDATE_YTDLP = { text: "Update yt-dlp", url: YTDLP_DOCS };
+  const GET_FFMPEG = { text: "Get ffmpeg", url: FFMPEG_DOCS };
+  const GET_RUNTIME = { text: "Get Node", url: RUNTIME_DOCS };
+  const SETUP = { text: "How to set this up", url: SETUP_DOCS };
+
+  // Said wherever a program is missing: the PATH is what makes everything
+  // find it, and Settings is the way out when that is not wanted.
+  const WHERE = "Put it on your PATH, or say where it is in Settings, "
+    + "under Programs.";
+
+  // Only updating is left as a command. "yt-dlp -U" is one word, it works,
+  // and a program that is already installed was installed somehow, which is
+  // what decides the right way to update it.
   const COMMANDS = {
-    linux: {
-      ytdlp: "sudo apt install yt-dlp",
-      ffmpeg: "sudo apt install ffmpeg",
-      python: "sudo apt install python3",
-      update: "sudo apt install --only-upgrade yt-dlp",
-      jsruntime: "sudo apt install nodejs",
-      note: "On Debian and Ubuntu. Other distributions use their own package manager.",
-      helper: "./host/install.sh"
-    },
-    win: {
-      ytdlp: "winget install yt-dlp.yt-dlp",
-      ffmpeg: "winget install Gyan.FFmpeg",
-      python: "winget install Python.Python.3.12",
-      update: "winget upgrade yt-dlp.yt-dlp",
-      jsruntime: "winget install OpenJS.NodeJS",
-      note: "In PowerShell or Terminal.",
-      helper: "powershell -ExecutionPolicy Bypass -File host\\install.ps1"
-    },
-    mac: {
-      ytdlp: "brew install yt-dlp",
-      ffmpeg: "brew install ffmpeg",
-      python: "brew install python",
-      update: "brew upgrade yt-dlp",
-      jsruntime: "brew install node",
-      note: "With Homebrew.",
-      helper: "./host/install.sh"
-    }
+    linux: { update: "sudo apt install --only-upgrade yt-dlp" },
+    win: { update: "winget upgrade yt-dlp.yt-dlp" },
+    mac: { update: "brew upgrade yt-dlp" }
   };
 
   function commands(os) {
@@ -124,26 +121,26 @@
 
     if (!report) {
       return state("no-helper", true,
-        "The helper is not installed",
+        "Video downloads are not set up yet",
         "Downloading a video needs a small program outside the browser, because an "
-        + "add-on cannot run one itself. Images do not need it.",
-        [{ text: "Run the installer from the add-on folder:", command: how.helper },
-          { text: how.note }]);
+        + "add-on cannot run one itself. It is a one-time setup, and images, "
+        + "audio, documents and the rest do not need it.",
+        [], SETUP);
     }
 
     if (report.type === "error" || typeof report.host !== "number") {
       return state("helper-broken", true,
         "The helper answered, but not with anything usable",
         report.detail || "It reported an error instead of a description of the machine.",
-        [{ text: "Install it again:", command: how.helper }]);
+        [], SETUP);
     }
 
     if (report.host < NEEDS_HOST) {
       return state("helper-outdated", true,
         "The helper is out of date",
         `This add-on needs helper version ${NEEDS_HOST}, and the installed one is `
-        + `version ${report.host}.`,
-        [{ text: "Install it again from the add-on folder:", command: how.helper }]);
+        + `version ${report.host}. Setting it up again replaces it.`,
+        [], SETUP);
     }
 
     const ytdlp = report.ytdlp || {};
@@ -151,16 +148,14 @@
       return state("no-ytdlp", true,
         "Video downloads need yt-dlp",
         "yt-dlp is the program that knows how to read a video out of a web page. "
-        + "The helper could not find it.",
-        [{ text: "Install it:", command: how.ytdlp }, { text: how.note }],
-        { text: "Get yt-dlp", url: YTDLP_DOCS });
+        + `The helper could not find it. ${WHERE}`,
+        [], GET_YTDLP);
     }
     if (ytdlp.broken) {
       return state("ytdlp-broken", true,
-        "yt-dlp is installed but will not run",
+        "yt-dlp is there but will not run",
         ytdlp.broken,
-        [{ text: "Install it again:", command: how.ytdlp }],
-        { text: "Get yt-dlp", url: YTDLP_DOCS });
+        [], GET_YTDLP);
     }
 
     const tags = (report.releases || {}).tags || [];
@@ -175,7 +170,7 @@
         + "like a fault in this add-on rather than an old program. Video "
         + "downloads stay shut until it is updated.",
         [{ text: "Update it:", command: update }],
-        { text: "Update yt-dlp", url: YTDLP_DOCS });
+        UPDATE_YTDLP);
     }
 
     const folder = report.downloads || {};
@@ -199,8 +194,8 @@
       return state("no-ffmpeg", false,
         "Without ffmpeg, some videos cannot be saved",
         "Sites such as YouTube send the picture and the sound separately, and ffmpeg "
-        + "is what joins them. Videos that come as a single stream still work.",
-        [{ text: "Install it:", command: how.ffmpeg }, { text: how.note }]);
+        + `is what joins them. Videos that come as a single stream still work. ${WHERE}`,
+        [], GET_FFMPEG);
     }
 
     const runtime = report.jsruntime || {};
@@ -210,7 +205,7 @@
         "YouTube and others hide their addresses behind JavaScript, and yt-dlp needs "
         + "a runtime to work them out. Node, Deno or Bun will do. Other sites are "
         + "unaffected.",
-        [{ text: "Install one:", command: how.jsruntime }, { text: how.note }]);
+        [], GET_RUNTIME);
     }
 
     if (behind !== null && behind >= SUGGEST_BEHIND) {
@@ -219,7 +214,7 @@
         `You have ${ytdlp.version}. Some sites may not work until it is updated. `
         + "Nothing is blocked yet.",
         [{ text: "Update it:", command: update }],
-        { text: "Update yt-dlp", url: YTDLP_DOCS });
+        UPDATE_YTDLP);
     }
 
     // No release list, so the only measure left is the date on the copy itself.
@@ -231,7 +226,7 @@
         "The list of releases could not be fetched, so whether a newer one exists "
         + "is unknown. A copy this old usually is behind.",
         [{ text: "Update it:", command: update }],
-        { text: "Update yt-dlp", url: YTDLP_DOCS });
+        UPDATE_YTDLP);
     }
 
     return state("ready", false,
@@ -257,19 +252,16 @@
   }
 
   function ytdlpRow(report, os) {
-    const how = commands(os);
     const ytdlp = report.ytdlp || {};
-    const get = { text: "Get yt-dlp", url: YTDLP_DOCS };
-    const later = { text: "Update yt-dlp", url: YTDLP_DOCS };
 
     if (!ytdlp.found) {
       return row("ytdlp", "yt-dlp", "bad",
         "Not found. It is what reads a video out of a web page, and video "
-        + "downloads need it.", how.ytdlp, get);
+        + `downloads need it. ${WHERE}`, "", GET_YTDLP);
     }
     if (ytdlp.broken) {
       return row("ytdlp", "yt-dlp", "bad",
-        `Installed but will not run. ${ytdlp.broken}`, how.ytdlp, get);
+        `There but will not run. ${ytdlp.broken}`, "", GET_YTDLP);
     }
 
     const tags = (report.releases || {}).tags || [];
@@ -280,59 +272,64 @@
       return row("ytdlp", "yt-dlp", "bad",
         `${ytdlp.version}, ${behind} releases behind. ${tags[0]} is out, and a `
         + "copy this far behind fails on many sites. Video downloads stay shut "
-        + "until it is updated.", update, later);
+        + "until it is updated.", update, UPDATE_YTDLP);
     }
     if (behind !== null && behind >= SUGGEST_BEHIND) {
       return row("ytdlp", "yt-dlp", "old",
         `${ytdlp.version}, one release behind. It still works, and ${tags[0]} is `
-        + "out. Some sites may need the newer one.", update, later);
+        + "out. Some sites may need the newer one.", update, UPDATE_YTDLP);
     }
 
     const age = ageInDays(ytdlp.version, new Date());
     if (behind === null && age !== null && age > BLIND_SUGGEST_DAYS) {
       return row("ytdlp", "yt-dlp", "old",
         `${ytdlp.version}, ${days(age)} old. The release list could not be `
-        + "fetched, so whether a newer one is out is unknown.", update, later);
+        + "fetched, so whether a newer one is out is unknown.", update, UPDATE_YTDLP);
     }
+    const where = ytdlp.configured ? ", from the path you set" : "";
     if (behind === null) {
-      return row("ytdlp", "yt-dlp", "ok", `${ytdlp.version}.`);
+      return row("ytdlp", "yt-dlp", "ok", `${ytdlp.version}${where}.`);
     }
-    return row("ytdlp", "yt-dlp", "ok", `${ytdlp.version}, current.`);
+    return row("ytdlp", "yt-dlp", "ok", `${ytdlp.version}, current${where}.`);
   }
 
-  function ffmpegRow(report, os) {
+  function ffmpegRow(report) {
     const ffmpeg = report.ffmpeg || {};
     if (ffmpeg.found) {
-      return row("ffmpeg", "ffmpeg", "ok", `${ffmpeg.version}.`);
+      // Worth saying when it came from Settings rather than the PATH: that is
+      // the one the user has to keep up to date themselves.
+      return row("ffmpeg", "ffmpeg", "ok",
+        ffmpeg.configured ? `${ffmpeg.version}, from the path you set.`
+          : `${ffmpeg.version}.`);
     }
     // Missing ffmpeg costs some videos, not all of them, so the row warns
     // rather than refusing.
     return row("ffmpeg", "ffmpeg", "old",
       "Not found. Sites such as YouTube send the picture and the sound "
       + "separately, and ffmpeg is what joins them. Videos that come as one "
-      + "stream still work without it.",
-      commands(os).ffmpeg, { text: "Get ffmpeg", url: FFMPEG_DOCS });
+      + `stream still work without it. ${WHERE}`, "", GET_FFMPEG);
   }
 
   function tools(report, os) {
-    const how = commands(os);
     if (!helperUsable(report)) {
       const why = report
         ? "The helper is out of date, so nothing can be detected."
-        : "The helper is not installed, so nothing can be detected.";
+        : "Video downloads need a one-time setup, and nothing about them can "
+          + "be detected until it is done.";
       return {
         rows: [
-          row("ytdlp", "yt-dlp", "unknown", "Cannot tell yet."),
-          row("ffmpeg", "ffmpeg", "unknown", "Cannot tell yet.")
+          row("ytdlp", "yt-dlp", "unknown", "Cannot tell yet.", "", GET_YTDLP),
+          row("ffmpeg", "ffmpeg", "unknown", "Cannot tell yet.", "", GET_FFMPEG)
         ],
-        helper: { text: why, command: how.helper, note: how.note }
+        helper: { text: why, link: SETUP }
       };
     }
-    return { rows: [ytdlpRow(report, os), ffmpegRow(report, os)], helper: null };
+    return { rows: [ytdlpRow(report, os), ffmpegRow(report)], helper: null };
   }
 
   window.CTAReady = {
     NEEDS_HOST, SUGGEST_BEHIND, FORCE_BEHIND, YTDLP_DOCS, FFMPEG_DOCS,
+    RUNTIME_DOCS, SETUP_DOCS,
     commands, updateCommand, releasesBehind, check, tools
   };
 })();

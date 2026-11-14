@@ -126,7 +126,7 @@
     /* Dimmed on purpose when the machine cannot download: the controls are not
        broken, they are held shut, and it should look deliberate. */
     #video-tools.gated { opacity: 0.4; pointer-events: none; filter: grayscale(0.4); }
-    #download-folder { width: 100%; max-width: 420px; }
+    #download-folder, #ytdlp-path, #ffmpeg-path { width: 100%; max-width: 420px; }
     #video-details { margin-top: 10px; color: var(--muted); font-size: 12px; }
     /* Above everything, and deaf to the pointer: an overlay that could take
        the drag's events would hide itself the moment it appeared. */
@@ -291,6 +291,7 @@
       <p id="home-helper" class="hint" hidden></p>
       <div class="row">
         <button id="home-recheck">Check again</button>
+        <button id="home-setup" hidden></button>
       </div>
 
       <h2>Permissions</h2>
@@ -729,6 +730,22 @@
         <button id="folder-default">Use the default</button>
       </div>
 
+      <h2>Programs</h2>
+      <p class="hint">Video downloads use yt-dlp, and ffmpeg for sites that
+        send the picture and the sound separately. The best place for them is
+        your PATH, where everything finds them. If you would rather not, say
+        where each file is and the add-on will use it.</p>
+      <label for="ytdlp-path">Where yt-dlp is</label>
+      <input id="ytdlp-path" type="text" spellcheck="false"
+        placeholder="on the PATH">
+      <label for="ffmpeg-path">Where ffmpeg is</label>
+      <input id="ffmpeg-path" type="text" spellcheck="false"
+        placeholder="on the PATH">
+      <div class="row">
+        <button id="tools-save" class="primary">Save</button>
+        <button id="tools-clear">Use the PATH</button>
+      </div>
+
       <h2>Conversions</h2>
       <label class="check"><input type="checkbox" id="all-sites">
         <span>Allow conversions on all sites</span></label>
@@ -800,6 +817,7 @@
   <script src="platform/videoprefs.js"></script>
   <script src="platform/failures.js"></script>
   <script src="platform/folder.js"></script>
+  <script src="platform/tools.js"></script>
   <script src="platform/messages.js"></script>
   <script src="platform/kinds.js"></script>
   <script src="formats/wav.js"></script>
