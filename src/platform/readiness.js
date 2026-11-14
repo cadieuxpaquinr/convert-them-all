@@ -41,8 +41,21 @@
   // Elsewhere the system's own ffmpeg is the right one.
   const FFMPEG_BUILDS = "https://github.com/yt-dlp/FFmpeg-Builds/releases/latest";
   const RUNTIME_DOCS = "https://nodejs.org/en/download";
-  const SETUP_DOCS =
-    "https://github.com/cadieuxpaquinr/convert-them-all#install";
+  // The instructions, with a section per platform. The branch moves to main
+  // when 0.2.0 is merged.
+  const SETUP_DOCS = "https://github.com/cadieuxpaquinr/convert-them-all"
+    + "/blob/0.2.0/main/SCRIPT_INSTALL.md";
+  const SETUP_ANCHORS = { linux: "#linux", win: "#windows", mac: "#macos" };
+
+  function setupLink(os) {
+    return { text: "installation instructions",
+      url: SETUP_DOCS + (SETUP_ANCHORS[os] || "") };
+  }
+
+  // Said once, where the helper is missing. One line and two buttons: an
+  // explanation of native messaging is not what anyone wants at that moment.
+  const NEEDS_SETUP = "Video download requires an additional plugin "
+    + "installed. Click for more details";
 
   const GET_YTDLP = { text: "Get yt-dlp", url: YTDLP_DOCS };
   const UPDATE_YTDLP = { text: "Update yt-dlp", url: YTDLP_DOCS };
@@ -50,7 +63,7 @@
     return { text: "Get ffmpeg", url: os === "win" ? FFMPEG_BUILDS : FFMPEG_DOCS };
   }
   const GET_RUNTIME = { text: "Get Node", url: RUNTIME_DOCS };
-  const SETUP = { text: "How to set this up", url: SETUP_DOCS };
+
 
   // Said wherever a program is missing. The Downloads folder is searched
   // already, so the first thing to try is simply downloading it.
@@ -126,11 +139,14 @@
     return years < 1.5 ? "over a year" : `${Math.round(years)} years`;
   }
 
-  function state(id, blocking, title, detail, steps, link) {
+  // reload: the pane offers a second button that asks the helper again,
+  // which is all a finished installation needs.
+  function state(id, blocking, title, detail, steps, link, reload) {
     return {
       id, blocking, ready: id === "ready", title, detail,
       steps: steps || [],
-      link: link || null
+      link: link || null,
+      reload: !!reload
     };
   }
 
@@ -139,27 +155,21 @@
     const how = commands(os);
 
     if (!report) {
-      return state("no-helper", true,
-        "Video downloads are not set up yet",
-        "Downloading a video needs a small program outside the browser, because an "
-        + "add-on cannot run one itself. It is a one-time setup, and images, "
-        + "audio, documents and the rest do not need it.",
-        [], SETUP);
+      return state("no-helper", true, NEEDS_SETUP, "", [], setupLink(os), true);
     }
 
     if (report.type === "error" || typeof report.host !== "number") {
-      return state("helper-broken", true,
-        "The helper answered, but not with anything usable",
-        report.detail || "It reported an error instead of a description of the machine.",
-        [], SETUP);
+      return state("helper-broken", true, NEEDS_SETUP,
+        report.detail || "The plugin answered with an error.",
+        [], setupLink(os), true);
     }
 
     if (report.host < NEEDS_HOST) {
       return state("helper-outdated", true,
-        "The helper is out of date",
-        `This add-on needs helper version ${NEEDS_HOST}, and the installed one is `
-        + `version ${report.host}. Setting it up again replaces it.`,
-        [], SETUP);
+        "The plugin is out of date. Click for more details",
+        `This add-on needs version ${NEEDS_HOST}, and the installed one is `
+        + `version ${report.host}. Installing it again replaces it.`,
+        [], setupLink(os), true);
     }
 
     const ytdlp = report.ytdlp || {};
@@ -328,26 +338,21 @@
   }
 
   function tools(report, os) {
+    // Nothing is listed while the plugin is missing. Neither program can be
+    // looked for without it, and telling someone to install two things they
+    // cannot yet use is three jobs where there is one.
     if (!helperUsable(report)) {
       const why = report
-        ? "The helper is out of date, so nothing can be detected."
-        : "Video downloads need a one-time setup, and nothing about them can "
-          + "be detected until it is done.";
-      return {
-        rows: [
-          row("ytdlp", "yt-dlp", "unknown", "Cannot tell yet.", "", GET_YTDLP),
-          row("ffmpeg", "ffmpeg", "unknown", "Cannot tell yet.", "",
-            ffmpegLink(os))
-        ],
-        helper: { text: why, link: SETUP }
-      };
+        ? "The plugin is out of date. Click for more details"
+        : NEEDS_SETUP;
+      return { rows: [], helper: { text: why, link: setupLink(os), reload: true } };
     }
     return { rows: [ytdlpRow(report, os), ffmpegRow(report, os)], helper: null };
   }
 
   window.CTAReady = {
     NEEDS_HOST, SUGGEST_BEHIND, FORCE_BEHIND, YTDLP_DOCS, FFMPEG_DOCS,
-    FFMPEG_BUILDS, RUNTIME_DOCS, SETUP_DOCS,
-    commands, updateCommand, releasesBehind, ffmpegLink, check, tools
+    FFMPEG_BUILDS, RUNTIME_DOCS, SETUP_DOCS, NEEDS_SETUP,
+    commands, updateCommand, releasesBehind, ffmpegLink, setupLink, check, tools
   };
 })();

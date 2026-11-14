@@ -30,20 +30,31 @@ function noInstallCommands(name, thing) {
   is(name, offending, []);
 }
 
-// No helper at all: the rows cannot say anything, and the way out is a link.
+// No helper at all: nothing is listed, because nothing can be looked for, and
+// two programs the user cannot yet use are not two jobs worth giving them.
 let t = R.tools(null, "linux");
-is("both unknown", t.rows.map((r) => r.mark), ["unknown", "unknown"]);
-is("but each still offers its download",
-  t.rows.map((r) => r.link.text), ["Get yt-dlp", "Get ffmpeg"]);
-is("the helper note points at the setup page", t.helper.link.url, R.SETUP_DOCS);
-is("and says why there is nothing to report",
-  t.helper.text.includes("one-time setup"), true);
+is("nothing is listed", t.rows, []);
+is("one line says what is needed", t.helper.text, R.NEEDS_SETUP);
+is("and it is one sentence", t.helper.text.split(". ").length <= 2, true);
+is("the instructions are offered", t.helper.link.text, "installation instructions");
+is("pointing at this machine's section", t.helper.link.url,
+  `${R.SETUP_DOCS}#linux`);
+is("with a way back once it is done", t.helper.reload, true);
 noInstallCommands("no installer is suggested anywhere", t);
 
 t = R.tools({ type: "report", host: 1 }, "win");
-is("an old helper is unknown too", t.rows[0].mark, "unknown");
-is("and is pointed at the same page", t.helper.link.url, R.SETUP_DOCS);
+is("an old helper lists nothing either", t.rows, []);
+is("and says it is out of date",
+  t.helper.text.startsWith("The plugin is out of date"), true);
+is("with the windows section", t.helper.link.url, `${R.SETUP_DOCS}#windows`);
+is("and the same way back", t.helper.reload, true);
 noInstallCommands("nor for an old helper", t);
+
+is("every platform has its own anchor",
+  ["linux", "win", "mac"].map((os) => R.setupLink(os).url.split("#")[1]),
+  ["linux", "windows", "macos"]);
+is("and an unknown one still lands on the page",
+  R.setupLink("fish").url, R.SETUP_DOCS);
 
 // Everything current.
 t = R.tools(base(), "linux");
@@ -120,20 +131,31 @@ is("a system install updates with winget on windows",
   t.rows[0].command, "winget upgrade yt-dlp.yt-dlp");
 
 // check(), which is what the Videos pane shows.
-let s = R.check(null, "linux");
+let s = R.check(null, "mac");
 is("no helper blocks", [s.id, s.blocking], ["no-helper", true]);
-is("and offers the setup page", s.link.url, R.SETUP_DOCS);
+is("and says the one line", s.title, R.NEEDS_SETUP);
+is("with nothing else to read", s.detail, "");
+is("the instructions, for this platform", s.link.url, `${R.SETUP_DOCS}#macos`);
+is("and the reload button", s.reload, true);
 is("with no steps to follow", s.steps, []);
 noInstallCommands("the videos pane asks for no installer either", s);
 
 s = R.check({ type: "report", host: 2 }, "linux");
 is("an old helper blocks", s.id, "helper-outdated");
 is("and says what version is needed", s.detail.includes(String(R.NEEDS_HOST)), true);
-is("pointing at the setup page", s.link.url, R.SETUP_DOCS);
+is("pointing at the instructions", s.link.url, `${R.SETUP_DOCS}#linux`);
+is("with the reload button too", s.reload, true);
 
 s = R.check({ type: "error", detail: "it broke" }, "linux");
 is("a broken helper blocks", s.id, "helper-broken");
 is("and shows what it said", s.detail, "it broke");
+is("while the line stays the same", s.title, R.NEEDS_SETUP);
+
+// A working helper offers no reload button: there is nothing to install.
+s = R.check(base(), "linux");
+is("ready has no reload", s.reload, false);
+is("nor does a missing yt-dlp",
+  R.check(base({ ytdlp: { found: false } }), "linux").reload, false);
 
 s = R.check(base({ ytdlp: { found: false } }), "linux");
 is("no yt-dlp blocks", [s.id, s.blocking], ["no-ytdlp", true]);

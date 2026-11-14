@@ -66,14 +66,18 @@
   function paintTools(answer) {
     el.tools.textContent = "";
     for (const row of answer.rows) el.tools.appendChild(drawRow(row));
-    // Said once, under the list, rather than twice over in two rows that can
-    // only report the same absence. There is no command here: the setup lives
-    // behind the button, on the project's own page.
-    el.helper.textContent = "";
-    el.helperSetup.hidden = !answer.helper;
-    el.helper.hidden = !answer.helper;
-    if (!answer.helper) return;
-    el.helper.textContent = answer.helper.text;
+
+    // While the plugin is missing there is one thing to do, so there is one
+    // thing on screen: the line, the instructions, and the button to press
+    // when they have been followed. Checking again would say the same as the
+    // reload button, in worse words.
+    const missing = !!answer.helper;
+    el.helper.hidden = !missing;
+    el.helperSetup.hidden = !missing;
+    el.helperReload.hidden = !missing;
+    el.recheck.hidden = missing;
+    el.helper.textContent = missing ? answer.helper.text : "";
+    if (!missing) return;
     el.helperSetup.textContent = answer.helper.link.text;
     el.helperSetup.onclick = () => open(answer.helper.link.url);
   }
@@ -88,6 +92,7 @@
     el.tools.appendChild(item);
     el.helper.hidden = true;
     el.helperSetup.hidden = true;
+    el.helperReload.hidden = true;
   }
 
   async function paint(report) {
@@ -129,12 +134,16 @@
     el.tools = document.getElementById("home-tools");
     el.helper = document.getElementById("home-helper");
     el.helperSetup = document.getElementById("home-setup");
+    el.helperReload = document.getElementById("home-reload");
+    el.recheck = document.getElementById("home-recheck");
     el.accessMark = document.querySelector("#home-access .mark");
     el.accessDetail = document.getElementById("access-detail");
     el.accessActions = document.getElementById("access-actions");
 
     document.getElementById("home-recheck")
       .addEventListener("click", () => recheck().catch(() => {}));
+    // The same question, asked by someone who has just finished installing.
+    el.helperReload.addEventListener("click", () => recheck().catch(() => {}));
 
     // Straight from the click: Firefox only grants a request still inside the
     // gesture that asked for it.

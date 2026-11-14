@@ -257,6 +257,10 @@
     link = state.link;
     el.helperLink.hidden = !link;
     if (link) el.helperLink.textContent = link.text;
+    // The second button belongs to the states that ask for an installation:
+    // pressing it asks the helper again, which is all a finished one needs.
+    el.helperReload.hidden = !state.reload;
+    el.recheck.hidden = state.reload;
     el.helperActions.hidden = state.ready;
   }
 
@@ -290,6 +294,8 @@
     el.helperSteps = document.getElementById("helper-steps");
     el.helperActions = document.getElementById("helper-actions");
     el.helperLink = document.getElementById("helper-link");
+    el.helperReload = document.getElementById("helper-reload");
+    el.recheck = document.getElementById("helper-recheck");
     el.tools = document.getElementById("video-tools");
     el.selection = document.getElementById("video-selection");
     el.url = document.getElementById("video-url");
@@ -307,6 +313,8 @@
     placeholder = el.selection.textContent;
 
     document.getElementById("helper-recheck")
+      .addEventListener("click", () => recheck().catch(() => {}));
+    document.getElementById("helper-reload")
       .addEventListener("click", () => recheck().catch(() => {}));
     // Checked again from the home page: this pane follows, rather than keeping
     // an answer the user has just acted on.

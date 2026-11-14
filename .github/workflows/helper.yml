@@ -1,0 +1,129 @@
+# Builds the helper into one program per platform, so nobody has to install
+# Python to download a video.
+#
+# PyInstaller cannot cross-compile: a Windows program has to be built on
+# Windows and a Mac one on a Mac, which is the whole reason this runs on three
+# runners rather than on a laptop.
+#
+# Push a tag to cut a release:
+#   git tag helper-v5 && git push origin helper-v5
+#
+# The tag names the helper's own protocol version, HOST_VERSION in
+# host/cta_host.py, because that is what the add-on checks against.
+
+name: helper
+
+on:
+  push:
+    tags: ["helper-v*"]
+  # Also runnable by hand, to see that it still builds before tagging.
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            label: linux
+            binary: cta-helper
+          - os: windows-latest
+            label: windows
+            binary: cta-helper.exe
+          - os: macos-latest
+            label: macos
+            binary: cta-helper
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install PyInstaller
+        run: python -m pip install --disable-pip-version-check pyinstaller
+
+      - name: Build the helper
+        run: >
+          pyinstaller --onefile --name cta-helper
+          --distpath dist host/cta_host.py
+
+      # The program answers before it is shipped. A ping needs nothing
+      # installed and proves the bundle actually runs on this platform.
+      - name: Check that it answers
+        shell: python
+        run: |
+          import json, struct, subprocess, sys
+          binary = "dist/${{ matrix.binary }}"
+          payload = json.dumps({"type": "ping"}).encode()
+          out = subprocess.run([binary], capture_output=True,
+                               input=struct.pack("=I", len(payload)) + payload)
+          raw = out.stdout
+          if len(raw) < 4:
+              sys.exit(f"no answer: {out.stderr[:400]!r}")
+          size = struct.unpack("=I", raw[:4])[0]
+          answer = json.loads(raw[4:4 + size])
+          print(json.dumps(answer, indent=1)[:400])
+          if answer.get("type") != "report":
+              sys.exit(f"answered {answer.get('type')!r}, not a report")
+
+      # What a person downloads: the program, the installer for their
+      # platform, and the manifest it fills in. Nothing else.
+      - name: Gather the release folder
+        shell: bash
+        run: |
+          out="cta-helper-${{ matrix.label }}"
+          mkdir -p "$out"
+          cp "dist/${{ matrix.binary }}" "$out/"
+          cp host/cta_host.json "$out/"
+          if [ "${{ matrix.label }}" = "windows" ]; then
+            cp host/install.ps1 "$out/"
+          else
+            cp host/install.sh "$out/"
+            chmod +x "$out/install.sh" "$out/${{ matrix.binary }}"
+          fi
+          cp SCRIPT_INSTALL.md "$out/"
+
+      - name: Zip it
+        shell: bash
+        run: |
+          out="cta-helper-${{ matrix.label }}"
+          if [ "${{ matrix.label }}" = "windows" ]; then
+            powershell -Command "Compress-Archive -Path '$out' -DestinationPath '$out.zip'"
+          else
+            zip -r "$out.zip" "$out"
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cta-helper-${{ matrix.label }}
+          path: cta-helper-${{ matrix.label }}.zip
+
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: built
+
+      # The add-on links at releases/latest/download/cta-helper-<platform>.zip,
+      # so these names are part of the interface and cannot drift.
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: built/*/*.zip
+          body: |
+            The helper for Convert Them All, as a program: no Python needed.
+
+            Download the zip for your system, unzip it, and follow
+            SCRIPT_INSTALL.md inside, or the instructions the add-on links to.
+
+            Nothing here is signed. Windows will warn about an unknown
+            publisher and macOS will refuse it until it is opened once from
+            the right-click menu; both are covered in the instructions.

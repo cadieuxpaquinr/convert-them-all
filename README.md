@@ -141,33 +141,38 @@ Firefox removes a temporary add-on when it closes.
 
 ### For video downloads only
 
-Three things, and the app never asks you to run any of them: it links to the first two
-and tells you what it found.
+Three things, and the app never asks you to run any of them: it links to each and tells
+you what it found.
 
-1. **[yt-dlp](https://github.com/yt-dlp/yt-dlp#installation)**, which reads a video out
+1. **The plugin**, which runs yt-dlp for the add-on, because a Firefox add-on is not
+   allowed to run a program itself. Download it, unzip it, run one command:
+   **[SCRIPT_INSTALL.md](SCRIPT_INSTALL.md)**. It comes as a program, so nothing else is
+   needed, or as Python source if you would rather read what you run.
+2. **[yt-dlp](https://github.com/yt-dlp/yt-dlp#installation)**, which reads a video out
    of a web page.
-2. **ffmpeg**, for sites that send the picture and the sound separately, which on
+3. **ffmpeg**, for sites that send the picture and the sound separately, which on
    YouTube is anything above 360p. On Windows use
    [yt-dlp's own builds](https://github.com/yt-dlp/FFmpeg-Builds/releases/latest), which
    are patched for the muxing faults yt-dlp meets; elsewhere
    [ffmpeg.org](https://ffmpeg.org/download.html) or your package manager.
-3. **The helper**, a small Python program that runs yt-dlp for the add-on, because an
-   add-on cannot run a program itself. This is the one-time setup:
-
-```sh
-./host/install.sh                                              # Linux and macOS
-powershell -ExecutionPolicy Bypass -File host\install.ps1      # Windows
-```
-
-**Where the first two live.** Three places are tried, in this order: a path you set in
+**Where yt-dlp and ffmpeg live.** Three places are tried, in this order: a path you set in
 Settings under **Programs**, your PATH, and then your Downloads folder, three levels
 deep. That last one means a `yt-dlp.exe` you downloaded and left alone is simply found,
 and so is an ffmpeg build unzipped into its own folder. Whichever is used is handed to
 yt-dlp as well, through `--ffmpeg-location`, so the two of them cannot disagree.
 
-The home page lists what was found and what is missing, and says which of the two it
-used. A Firefox installed as a snap cannot reach programs outside its confinement, so
-the helper will not work there.
+The home page lists what was found and what is missing, and says which of the three
+places it used. A Firefox installed as a snap cannot reach programs outside its
+confinement, so the plugin will not work there.
+
+**Building the plugin yourself** is one command, and the same one CI runs:
+
+```sh
+pyinstaller --onefile --name cta-helper host/cta_host.py
+```
+
+`.github/workflows/helper.yml` does that on Linux, Windows and macOS runners and
+attaches the three zips to a release, because PyInstaller cannot cross-compile.
 
 ## Permissions
 
