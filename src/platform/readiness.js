@@ -227,15 +227,11 @@
         [], ffmpegLink(os));
     }
 
-    const runtime = report.jsruntime || {};
-    if (!runtime.found) {
-      return state("no-jsruntime", false,
-        "Sites that scramble their links will fail",
-        "YouTube and others hide their addresses behind JavaScript, and yt-dlp needs "
-        + "a runtime to work them out. Node, Deno or Bun will do. Other sites are "
-        + "unaffected.",
-        [], GET_RUNTIME);
-    }
+    // Nothing is said here about a JavaScript runtime. yt-dlp carries its own
+    // interpreter and only wants an outside one for the harder challenges a
+    // few sites throw, so warning in advance was wrong: YouTube downloads
+    // perfectly well without Node. When a download does fail for want of one,
+    // failures.js says so, which is the moment the advice is true.
 
     if (behind !== null && behind >= SUGGEST_BEHIND) {
       return state("ytdlp-behind", false,
@@ -260,7 +256,7 @@
 
     return state("ready", false,
       "Ready",
-      `yt-dlp ${ytdlp.version}, ffmpeg ${ffmpeg.version}, ${runtime.name}. `
+      `yt-dlp ${ytdlp.version}, ffmpeg ${ffmpeg.version}. `
       + `Saving to ${folder.path}.`,
       []);
   }

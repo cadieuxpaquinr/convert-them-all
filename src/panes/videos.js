@@ -19,6 +19,8 @@
   let blocked = false;
   // What the link in the box turned out to offer, or null while unknown.
   let probed = null;
+  // The last failure, kept so the report can quote it.
+  let failure = null;
   // The output and its options, remembered between sessions.
   let choice = null;
 
@@ -39,6 +41,21 @@
   function showDetails(raw) {
     el.raw.textContent = raw || "";
     el.details.hidden = !raw;
+  }
+
+  // What a failure leaves on screen: the fix, when there is one worth
+  // pressing, and a way to say that this was wrong. Both go when the next
+  // download starts, because they belong to the one that failed.
+  function showFailure(why, context) {
+    const there = !!why;
+    el.failed.hidden = !there;
+    el.fix.hidden = !(there && why.link);
+    if (!there) {
+      failure = null;
+      return;
+    }
+    failure = { why, context };
+    if (why.link) el.fix.textContent = why.link.text;
   }
 
   function busy(on) {
@@ -180,6 +197,7 @@
       return;
     }
     showDetails("");
+    showFailure(null);
     busy(true);
     el.progress.textContent = "Starting…";
 
@@ -210,6 +228,11 @@
     setStatus(`${why.title}. ${why.detail}`
       + (why.command ? ` Try: ${why.command}` : ""), true);
     showDetails(why.raw);
+    showFailure(why, {
+      url,
+      format: CTAVideoFormat.intent(choice),
+      report: await CTAReport.get().catch(() => null)
+    });
   }
 
   // The app window is a popup, so it is never the active tab itself. The
@@ -309,6 +332,9 @@
     el.options = document.getElementById("video-options");
     el.optionHint = document.getElementById("video-option-hint");
     el.offers = document.getElementById("video-offers");
+    el.failed = document.getElementById("video-failed");
+    el.fix = document.getElementById("video-fix");
+    el.report = document.getElementById("video-report");
 
     placeholder = el.selection.textContent;
 
@@ -326,6 +352,20 @@
       }
     });
     el.download.addEventListener("click", () => download().catch(() => {}));
+    // Both open in a normal window: this one is a popup.
+    el.fix.addEventListener("click", () => {
+      if (failure && failure.why.link) {
+        browser.runtime.sendMessage({ type: "open-url", url: failure.why.link.url })
+          .catch(() => {});
+      }
+    });
+    el.report.addEventListener("click", () => {
+      if (!failure) return;
+      browser.runtime.sendMessage({
+        type: "open-url",
+        url: CTAFailure.report(failure.why, failure.context)
+      }).catch(() => {});
+    });
     el.detect.addEventListener("click", () => detect().catch(() => {}));
     el.cancel.addEventListener("click", () => CTANative.stop());
     el.url.addEventListener("keydown", (e) => {
@@ -335,6 +375,7 @@
     el.url.addEventListener("change", () => ask().catch(() => {}));
 
     el.selection.textContent = placeholder;
+    showFailure(null);
     start().catch(() => {});
     refresh().catch(() => {});
   }

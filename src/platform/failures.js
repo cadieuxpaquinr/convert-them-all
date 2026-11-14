@@ -7,13 +7,21 @@
  * message must never be thrown away.
  */
 (() => {
+  const ISSUES = "https://github.com/cadieuxpaquinr/convert-them-all/issues/new";
+  // A browser will carry a longer address than this, but a report nobody can
+  // open is worth nothing, and the end of what yt-dlp said is the part that
+  // matters.
+  const MAX_ADDRESS = 6000;
+  const MAX_RAW = 1500;
+
   const RULES = [
     {
       match: /no supported javascript runtime/i,
       title: "A JavaScript runtime is missing",
-      detail: "YouTube scrambles its links, and yt-dlp needs a JavaScript runtime "
-        + "to work them out. Node, Deno or Bun will do.",
-      command: (how) => how.jsruntime
+      detail: "This video needs one, which most do not: yt-dlp has an "
+        + "interpreter of its own and only asks for an outside one on the "
+        + "harder sites. Node, Deno or Bun will do.",
+      link: () => ({ text: "Get Node", url: CTAReady.RUNTIME_DOCS })
     },
     {
       match: /http error 403|unable to download video data/i,
@@ -33,7 +41,7 @@
       match: /ffmpeg|ffprobe/i,
       title: "ffmpeg is needed for this video",
       detail: "The picture and the sound come separately and have to be joined.",
-      command: (how) => how.ffmpeg
+      link: (os) => CTAReady.ffmpegLink(os)
     },
     {
       match: /private video|sign in to confirm|members-only|login required|cookies/i,
@@ -84,15 +92,16 @@
     },
     "no-ytdlp": {
       title: "yt-dlp is not installed",
-      detail: "The helper could not find it.",
-      command: (how) => how.ytdlp
+      detail: "The plugin could not find it.",
+      link: () => ({ text: "Get yt-dlp", url: CTAReady.YTDLP_DOCS })
     },
     "no-helper": {
-      title: "The helper is not running",
-      detail: "Nothing answered. Check the Videos section for how to install it."
+      title: "The plugin is not running",
+      detail: "Nothing answered.",
+      link: (os) => CTAReady.setupLink(os)
     },
     "helper-stopped": {
-      title: "The helper stopped",
+      title: "The plugin stopped",
       detail: "It closed before the download finished."
     }
   };
@@ -104,33 +113,71 @@
     const raw = (result && (result.detail || result.message)) || "";
     const known = result && BY_REASON[result.reason];
 
-    if (known) {
+    const found = known || RULES.find((rule) => rule.match.test(raw));
+    if (found) {
       return {
-        title: known.title,
-        detail: known.detail,
-        command: known.command ? known.command(how) : "",
+        title: found.title,
+        detail: found.detail,
+        command: found.command ? found.command(how) : "",
+        link: found.link ? found.link(os) : null,
         raw
       };
-    }
-
-    for (const rule of RULES) {
-      if (rule.match.test(raw)) {
-        return {
-          title: rule.title,
-          detail: rule.detail,
-          command: rule.command ? rule.command(how) : "",
-          raw
-        };
-      }
     }
 
     return {
       title: "The download did not finish",
       detail: "yt-dlp stopped without a reason this add-on recognises.",
       command: "",
+      link: null,
       raw
     };
   }
 
-  window.CTAFailure = { explain };
+  // What was asked for, in the words the panels use rather than the
+  // arguments the helper built from them.
+  function asked(format) {
+    if (!format) return "unknown";
+    const parts = [format.container];
+    if (format.height) parts.push(`${format.height}p`);
+    if (format.fps) parts.push(`${format.fps} fps`);
+    if (format.vcodec) parts.push(format.vcodec);
+    if (format.method) parts.push(format.method);
+    if (format.bitrate) parts.push(`${format.bitrate} kbps`);
+    if (format.sponsorblock) parts.push("skipping sponsors");
+    return parts.join(", ");
+  }
+
+  function versions(report) {
+    if (!report) return "the plugin did not answer";
+    const ytdlp = report.ytdlp || {};
+    const ffmpeg = report.ffmpeg || {};
+    return `${report.platform || "unknown"} · plugin ${report.host} · `
+      + `yt-dlp ${ytdlp.version || "missing"} · ffmpeg ${ffmpeg.version || "missing"}`;
+  }
+
+  // A filled-in issue, for the cases this guessed wrong and the ones it had
+  // no guess for. The end of yt-dlp's output is kept rather than the start:
+  // the error is always last.
+  function report(why, context) {
+    const at = context || {};
+    const raw = String(why.raw || "");
+    const tail = raw.length > MAX_RAW ? `…${raw.slice(-MAX_RAW)}` : raw;
+    const body = [
+      "**What happened**", why.title, "",
+      "**Address**", at.url || "(not recorded)", "",
+      "**This machine**", versions(at.report), `Asked for: ${asked(at.format)}`, "",
+      "**yt-dlp said**", "```", tail || "(nothing)", "```", "",
+      "**Anything else**", ""
+    ].join("\n");
+
+    const address = `${ISSUES}?title=${encodeURIComponent(`Download failed: ${why.title}`)}`
+      + `&body=${encodeURIComponent(body)}`;
+    if (address.length <= MAX_ADDRESS) return address;
+    // Still too long, so the quoted output goes and the person can paste it.
+    const bare = body.replace(tail || "(nothing)", "(removed: paste it here)");
+    return `${ISSUES}?title=${encodeURIComponent(`Download failed: ${why.title}`)}`
+      + `&body=${encodeURIComponent(bare)}`;
+  }
+
+  window.CTAFailure = { ISSUES, explain, report, asked };
 })();

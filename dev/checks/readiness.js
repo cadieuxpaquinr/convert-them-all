@@ -175,9 +175,19 @@ s = R.check(base({ ffmpeg: { found: false } }), "linux");
 is("no ffmpeg warns without blocking", [s.id, s.blocking], ["no-ffmpeg", false]);
 is("and links to it", s.link.text, "Get ffmpeg");
 
+// A missing JavaScript runtime is not a problem until a download meets one.
+// yt-dlp has an interpreter of its own, and YouTube works without Node, so
+// warning in advance said something untrue. failures.js names it at the
+// moment it is true instead.
 s = R.check(base({ jsruntime: { found: false } }), "linux");
-is("no runtime warns", [s.id, s.blocking], ["no-jsruntime", false]);
-is("and links to node", s.link.url, R.RUNTIME_DOCS);
+is("no runtime is simply ready", [s.id, s.blocking], ["ready", false]);
+is("and nothing mentions one",
+  /javascript|runtime|node/i.test(`${s.title} ${s.detail}`), false);
+is("the ready line names the two that matter", s.detail,
+  "yt-dlp 2026.10.26, ffmpeg 8.0.1. Saving to /home/x/Downloads.");
+is("and says the same when a runtime is there",
+  R.check(base(), "linux").detail,
+  "yt-dlp 2026.10.26, ffmpeg 8.0.1. Saving to /home/x/Downloads.");
 
 s = R.check(base({ downloads: { path: "/nope", exists: false } }), "linux");
 is("a missing folder blocks", s.id, "no-folder");
@@ -187,7 +197,7 @@ s = R.check(base(), "linux");
 is("everything in place is ready", [s.id, s.ready, s.blocking],
   ["ready", true, false]);
 is("and reads as a summary",
-  s.detail, "yt-dlp 2026.10.26, ffmpeg 8.0.1, node. Saving to /home/x/Downloads.");
+  s.detail, "yt-dlp 2026.10.26, ffmpeg 8.0.1. Saving to /home/x/Downloads.");
 
 // The updaters themselves, unchanged.
 is("a self-updating copy", R.updateCommand("self", "linux"), "yt-dlp -U");
