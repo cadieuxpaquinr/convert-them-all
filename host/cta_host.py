@@ -116,7 +116,17 @@ DOWNLOAD_NAMES = {
 
 # How far into the Downloads folder to look, and how much of it to read. A
 # Downloads folder can hold years of rubbish, and this runs on every ping.
-SEARCH_DEPTH = 3
+#
+# Five, because of what unzipping really does on Windows. The ffmpeg build is
+# a zip holding a folder of the same name, and "Extract All" puts that inside
+# a folder it names after the zip, so the program ends up at
+#
+#   Downloads/ffmpeg-master-latest-win64-gpl
+#           /ffmpeg-master-latest-win64-gpl/bin/ffmpeg.exe
+#
+# which is four levels down. Three was not enough, and five leaves room for
+# one more surprise of the same kind.
+SEARCH_DEPTH = 5
 SEARCH_LIMIT = 4000
 
 
@@ -125,30 +135,56 @@ def runnable(place):
     return place.is_file() and os.access(place, os.X_OK)
 
 
+def worth_opening(folder, name, depth):
+    """Whether to look inside a folder, which is what keeps this quick.
+
+    Everything directly in Downloads is opened, because that is where a file
+    lands. Below that only two kinds are followed: a folder named after the
+    program, which is how an ffmpeg build arrives, and bin, which is where
+    that build keeps the program. A Downloads folder full of holiday photos
+    is read once and left alone.
+    """
+    if depth == 0:
+        return True
+    low = folder.name.lower()
+    return low.startswith(name.lower()) or low == "bin"
+
+
 def search_downloads(name):
     """Look for a downloaded copy where it would be: the Downloads folder.
 
     Someone who follows a download link ends up with yt-dlp.exe in Downloads
     and nothing on their PATH. Finding it there is the difference between the
     add-on working and the add-on telling them to go and edit their PATH.
+
+    Breadth first, so the shallowest copy wins: a loose yt-dlp.exe beats one
+    inside a folder from last year.
     """
     root = downloads_folder()
     if not root.is_dir():
         return None
     wanted = DOWNLOAD_NAMES.get(name, (name,))
+    queue = [(root, 0)]
     seen = 0
-    # Shallowest first, so a loose yt-dlp.exe beats one inside an old folder.
-    for depth in range(SEARCH_DEPTH):
+
+    while queue:
+        folder, depth = queue.pop(0)
         try:
-            level = list(root.glob("/".join(["*"] * depth + ["*"])))
+            here = sorted(folder.iterdir())
         except OSError:
+            continue
+        seen += len(here)
+        if seen > SEARCH_LIMIT:
             return None
-        for place in level:
-            seen += 1
-            if seen > SEARCH_LIMIT:
-                return None
+
+        for place in here:
             if place.name in wanted and runnable(place):
                 return str(place)
+        if depth >= SEARCH_DEPTH:
+            continue
+        for place in here:
+            if place.is_dir() and worth_opening(place, name, depth):
+                queue.append((place, depth + 1))
     return None
 
 

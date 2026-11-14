@@ -270,4 +270,10 @@ Remove-Item 'HKCU:\Software\Mozilla\NativeMessagingHosts\convert_them_all'
 The add-on's home page will tell you what is still missing. Video downloads
 also need **yt-dlp**, and **ffmpeg** for sites that send the picture and the
 sound separately, which above 360p includes YouTube. The home page links to
-both, and finds them in your Downloads folder if you leave them there.
+both.
+
+**You can leave them in Downloads.** Both are looked for there, including
+inside the folder an unzipped ffmpeg build makes, and inside the second folder
+of the same name that Windows adds when you use "Extract All". There is
+nothing to move and no PATH to edit. If you keep them somewhere else, say
+where in Settings, under Programs.

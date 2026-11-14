@@ -156,10 +156,12 @@ you what it found.
    are patched for the muxing faults yt-dlp meets; elsewhere
    [ffmpeg.org](https://ffmpeg.org/download.html) or your package manager.
 **Where yt-dlp and ffmpeg live.** Three places are tried, in this order: a path you set in
-Settings under **Programs**, your PATH, and then your Downloads folder, three levels
-deep. That last one means a `yt-dlp.exe` you downloaded and left alone is simply found,
-and so is an ffmpeg build unzipped into its own folder. Whichever is used is handed to
-yt-dlp as well, through `--ffmpeg-location`, so the two of them cannot disagree.
+Settings under **Programs**, your PATH, and then your Downloads folder. The last one
+opens everything directly in Downloads, and then follows only folders named after the
+program and `bin` folders inside them, five levels down. That is what it takes to find
+`ffmpeg-master-latest-win64-gpl/ffmpeg-master-latest-win64-gpl/bin/ffmpeg.exe`, which is
+where Windows puts an ffmpeg build after "Extract All". Whichever copy is used is handed
+to yt-dlp as well, through `--ffmpeg-location`, so the two of them cannot disagree.
 
 The home page lists what was found and what is missing, and says which of the three
 places it used. A Firefox installed as a snap cannot reach programs outside its
