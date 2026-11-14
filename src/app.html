@@ -163,7 +163,11 @@
     .entries .folder { color: var(--muted); }
     .entries p { color: var(--muted); font-size: 12px; margin: 6px 0; }
     #archive-name { width: 100%; max-width: 220px; margin-top: 6px; }
-    #sheet-name { width: 100%; max-width: 220px; }
+    #sheet-name, #doc-name { width: 100%; max-width: 220px; }
+    #doc-format { padding: 5px; font: inherit; color: inherit;
+      background: var(--field-bg); border: 1px solid var(--field-border);
+      border-radius: 6px; }
+    #doc-outline .size { flex: 0 0 34px; }
     #sheet-format { padding: 5px; font: inherit; color: inherit;
       background: var(--field-bg); border: 1px solid var(--field-border);
       border-radius: 6px; }
@@ -253,6 +257,7 @@
       <button data-section="images">Images</button>
       <button data-section="videos">Videos</button>
       <button data-section="audio">Audio</button>
+      <button data-section="documents">Documents</button>
       <button data-section="sheets">Sheets</button>
       <button data-section="archives">Archives</button>
       <button data-section="websites">Websites</button>
@@ -455,6 +460,41 @@
           </div>
           <p class="hint">WAV holds the sound exactly as it was decoded, so the
             file is large. Everything happens on your computer.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="documents" hidden>
+      <h1>Documents</h1>
+      <p id="doc-selection" class="media-selection">Open a Markdown file, an HTML
+        file or a docx, or drop one on this window.</p>
+      <div class="row">
+        <button id="pick-doc">Choose a document&hellip;</button>
+        <input type="file" id="doc-file" accept=".md,.markdown,.html,.htm,.docx,.txt"
+          hidden>
+      </div>
+
+      <div class="columns">
+        <div>
+          <h2>What is in it</h2>
+          <div id="doc-outline" class="entries"></div>
+          <p class="hint">Headings, paragraphs, lists and code. Formatting
+            beyond that is not carried across.</p>
+        </div>
+
+        <div>
+          <h2>Convert to</h2>
+          <label class="field"><span>As</span>
+            <select id="doc-format"></select></label>
+
+          <h2>Name</h2>
+          <input id="doc-name" type="text" placeholder="document">
+
+          <div class="row">
+            <button id="doc-save" class="primary">Save</button>
+          </div>
+          <p class="hint">EPUB splits on first-level headings, one chapter
+            each. Reading an EPUB back is not offered.</p>
         </div>
       </div>
     </section>
@@ -725,6 +765,9 @@
   <script src="formats/pdf.js"></script>
   <script src="formats/zip.js"></script>
   <script src="formats/sheet.js"></script>
+  <script src="formats/doctext.js"></script>
+  <script src="formats/docx.js"></script>
+  <script src="formats/epub.js"></script>
   <script src="formats/tar.js"></script>
   <script src="platform/native.js"></script>
   <script src="platform/readiness.js"></script>
@@ -748,6 +791,7 @@
   <script src="panes/audio.js"></script>
   <script src="panes/archives.js"></script>
   <script src="panes/sheets.js"></script>
+  <script src="panes/documents.js"></script>
   <script src="panes/websites.js"></script>
   <script src="panes/home.js"></script>
   <script src="app.js"></script>

@@ -21,7 +21,8 @@
     audio: ["mp3", "wav", "wave", "flac", "ogg", "oga", "opus", "m4a", "aac",
       "weba", "wma", "aiff", "aif", "mka"],
     archive: ["zip", "tar", "gz", "tgz", "tbz", "bz2", "xz", "7z", "rar"],
-    sheet: ["xlsx", "xlsm", "xls", "ods", "csv", "tsv"]
+    sheet: ["xlsx", "xlsm", "xls", "ods", "csv", "tsv"],
+    document: ["md", "markdown", "docx", "odt", "rtf", "html", "htm", "epub"]
   };
 
   // An archive's type is often missing or wrong, and the names it goes by are
@@ -32,15 +33,22 @@
     "application/vnd.ms-excel", "text/csv", "text/tab-separated-values"
   ]);
 
+  const DOCUMENT_TYPES = new Set([
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/vnd.oasis.opendocument.text", "text/markdown", "text/html",
+    "application/epub+zip", "application/rtf"
+  ]);
+
   const ARCHIVE_TYPES = new Set([
     "application/zip", "application/x-zip-compressed", "application/x-tar",
     "application/gzip", "application/x-gzip", "application/x-compressed-tar"
   ]);
 
   const SECTIONS = { image: "images", audio: "audio", archive: "archives",
-    sheet: "sheets", other: "files" };
+    sheet: "sheets", document: "documents", other: "files" };
   const NOUNS = { image: "an image", audio: "an audio file",
-    archive: "an archive", sheet: "a spreadsheet", other: "a file" };
+    archive: "an archive", sheet: "a spreadsheet", document: "a document",
+    other: "a file" };
 
   function extensionOf(name) {
     const dot = String(name || "").lastIndexOf(".");
@@ -54,6 +62,7 @@
     const type = String(file.type || "").toLowerCase();
     // A spreadsheet is a zip too, so it is asked about before archives are.
     if (SHEET_TYPES.has(type)) return "sheet";
+    if (DOCUMENT_TYPES.has(type)) return "document";
     if (ARCHIVE_TYPES.has(type)) return "archive";
     if (type.startsWith("image/")) return "image";
     if (type.startsWith("audio/")) return "audio";
@@ -65,6 +74,7 @@
     if (EXTENSIONS.image.includes(ext)) return "image";
     if (EXTENSIONS.audio.includes(ext)) return "audio";
     if (EXTENSIONS.sheet.includes(ext)) return "sheet";
+    if (EXTENSIONS.document.includes(ext)) return "document";
     if (EXTENSIONS.archive.includes(ext)) return "archive";
     return "other";
   }

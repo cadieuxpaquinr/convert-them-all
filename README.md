@@ -54,6 +54,16 @@ Pick an audio file, or drop one. Firefox decodes mp3, wav, flac, ogg, opus, m4a 
 A browser has no audio encoder but MediaRecorder, which writes Opus alone and in real
 time. WAV is written from the decoded samples instead, which is instant and exact.
 
+### Documents
+
+Markdown, HTML and **docx** between each other, and out to **EPUB**, **PDF** or plain
+text. Everything meets in the middle as the same blocks, so three ways in and six out is
+one reader and six writers rather than eighteen conversions.
+
+Headings, paragraphs, lists, code and table rows carry across; formatting beyond that
+does not. EPUB splits on first-level headings, one chapter each. Reading an EPUB back is
+not offered.
+
 ### Sheets
 
 Open an **xlsx**, an **ods**, a **csv** or a **tsv** and save it as CSV (one file per
@@ -166,8 +176,8 @@ off it is.
 
 - **Sheets, written back**: csv into a real xlsx or ods, which means building the XML
   rather than only reading it.
-- **Documents**: Markdown, HTML and docx between each other, and a saved website section
-  as one EPUB. docx and EPUB are a zip full of XML as well.
+- **A saved website section as one EPUB**, which the Documents pane already writes for a
+  single document.
 - **Batch, and whole pages**: convert many files in one go, drop a folder, and a
   "Convert every image on this page" entry on the context menu. This is a change to how
   the app works rather than another format, and it is the one that earns the name.
