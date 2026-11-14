@@ -1,7 +1,7 @@
 {
   "manifest_version": 2,
   "name": "Convert Them All",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Convert images, audio and web pages in your browser. Download videos with yt-dlp. Nothing is uploaded.",
   "icons": {
     "16": "src/icons/icon.svg",
