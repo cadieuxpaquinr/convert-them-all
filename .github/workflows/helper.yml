@@ -53,6 +53,14 @@ jobs:
           pyinstaller --onefile --name cta-helper
           --distpath dist host/cta_host.py
 
+      # Windows gets an installer it can double-click, so that setting this
+      # up never asks anyone to open a terminal.
+      - name: Build the installer
+        if: matrix.label == 'windows'
+        run: >
+          pyinstaller --onefile --name cta-install
+          --distpath dist host/install.py
+
       # The program answers before it is shipped. A ping needs nothing
       # installed and proves the bundle actually runs on this platform.
       - name: Check that it answers
@@ -82,12 +90,35 @@ jobs:
           cp "dist/${{ matrix.binary }}" "$out/"
           cp host/cta_host.json "$out/"
           if [ "${{ matrix.label }}" = "windows" ]; then
-            cp host/install.ps1 "$out/"
+            cp dist/cta-install.exe "$out/"
+            # The same installer as source, for route B and for reading.
+            cp host/install.py "$out/"
           else
             cp host/install.sh "$out/"
             chmod +x "$out/install.sh" "$out/${{ matrix.binary }}"
           fi
           cp SCRIPT_INSTALL.md "$out/"
+
+      # A real installation, performed by a real Windows machine, on every
+      # build. The registry value is the one part that cannot be checked
+      # anywhere else, and the one that silently breaks everything.
+      - name: Install it, and read the registry back
+        if: matrix.label == 'windows'
+        shell: pwsh
+        working-directory: cta-helper-windows
+        run: |
+          .\cta-install.exe
+          if ($LASTEXITCODE -ne 0) { throw "the installer exited $LASTEXITCODE" }
+          $key = 'HKCU:\Software\Mozilla\NativeMessagingHosts\convert_them_all'
+          $named = (Get-ItemProperty -Path $key).'(default)'
+          Write-Output "registry: $named"
+          if (-not (Test-Path $named)) { throw "it named a manifest that is not there" }
+          $manifest = Get-Content $named -Raw | ConvertFrom-Json
+          Write-Output "manifest path: $($manifest.path)"
+          if (-not $manifest.path.EndsWith('cta-helper.exe')) {
+            throw "the manifest names $($manifest.path), not the helper"
+          }
+          if (-not (Test-Path $manifest.path)) { throw "the helper is not where it says" }
 
       - name: Zip it
         shell: bash

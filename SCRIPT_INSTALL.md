@@ -122,17 +122,10 @@ then "Extract". You now have a folder called `cta-helper-windows`.
 
 **3. Open that folder.**
 
-**4. Open PowerShell there.** Hold Shift, right-click on an empty part of the
-folder, and choose "Open PowerShell window here". On Windows 11 choose "Open
-in Terminal".
+**4. Double-click `cta-install.exe`.** A black window appears, says what it
+did, and waits for you to press a key. No terminal, no typing.
 
-**5. Run the installer.**
-
-```powershell
-powershell -ExecutionPolicy Bypass -File .\install.ps1
-```
-
-**6. Go back to Convert Them All and press "installation complete, reload".**
+**5. Go back to Convert Them All and press "installation complete, reload".**
 
 ### B: the Python way
 
@@ -153,26 +146,31 @@ pressing Install. Without that tick nothing below will find it.
 
 **4. Open the `host` folder inside it.**
 
-**5. Open PowerShell there,** as in step 4 above.
+**5. Open PowerShell there.** Hold Shift, right-click on an empty part of the
+folder, and choose "Open PowerShell window here". On Windows 11 choose "Open
+in Terminal".
 
 **6. Run the installer.**
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File .\install.ps1
+python install.py
 ```
 
 **7. Go back to Convert Them All and press "installation complete, reload".**
 
 ### If Windows warns you
 
-**"Windows protected your PC", or a warning about an unknown publisher.** The
-program is not signed, because a signing certificate costs money every year.
-Press "More info", then "Run anyway". If you would rather not, use route B:
-the Python file is text, and you can read every line of it first.
+**"Windows protected your PC", or a warning about an unknown publisher.**
+Neither program is signed, because a signing certificate costs money every
+year. Press "More info", then "Run anyway". It can appear twice: once for the
+installer, and once later when Firefox first starts the plugin. If you would
+rather not, use route B: `install.py` and `cta_host.py` are both text, and you
+can read every line of them first.
 
-**"running scripts is disabled on this system".** That is what
-`-ExecutionPolicy Bypass` in the command above is for. Make sure you typed the
-whole line.
+**The window closed before you could read it.** It waits for a key, so that
+should not happen. If it does, the installer did not start at all, which
+usually means the folder was not unzipped: running it from inside the zip
+preview will not work.
 
 ---
 

@@ -174,7 +174,10 @@ pyinstaller --onefile --name cta-helper host/cta_host.py
 ```
 
 `.github/workflows/helper.yml` does that on Linux, Windows and macOS runners and
-attaches the three zips to a release, because PyInstaller cannot cross-compile.
+attaches the three zips to a release, because PyInstaller cannot cross-compile. The
+Windows runner also builds `host/install.py` into `cta-install.exe`, so that setting
+this up on Windows is a double-click, and then installs it and reads the registry value
+back: the one part of this that cannot be checked anywhere but on Windows.
 
 ## Permissions
 
