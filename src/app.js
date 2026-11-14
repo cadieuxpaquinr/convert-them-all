@@ -81,7 +81,37 @@
       : `${file.name} is ${CTAKind.noun(kind)}. It went to ${PANES[where]}.`);
   }
 
-  function dropped(item) {
+  // Many files at once. They are routed by what the first one is, because a
+  // queue of mixed kinds has no single pane to live in; anything that does not
+  // match goes where it belongs on its own.
+  function leftOut(count) {
+    return `${count} other ${count === 1 ? "file was" : "files were"} left out.`;
+  }
+
+  async function handMany(waiting, first) {
+    const all = await waiting;
+    if (all.length < 2) return false;
+    const images = all.filter((entry) => CTAKind.of(entry.file) === "image");
+    const rest = all.length - images.length;
+
+    // Two or more images is a queue. One image among several files is not, so
+    // it opens on its own, and the rest are named rather than silently
+    // dropped.
+    if (images.length < 2) {
+      handFile(first, "");
+      CTAMessages.say(leftOut(all.length - 1));
+      return true;
+    }
+
+    show("images");
+    CTAImages.take(images.map((entry) => entry.file));
+    CTAMessages.say(rest
+      ? `${images.length} images queued. ${leftOut(rest)}`
+      : `${images.length} images queued.`);
+    return true;
+  }
+
+  function dropped(item, many) {
     // An address says nothing about what is behind it, so it goes to Images:
     // the preview is the answer.
     if (item.kind === "url") {
@@ -89,11 +119,10 @@
       CTAImages.set(item.url);
       return;
     }
-    handFile(item.file, "");
-    if (item.ignored > 0 && CTAKind.of(item.file) === "image") {
-      CTAMessages.say(`One image at a time, so ${item.ignored} more `
-        + `${item.ignored === 1 ? "was" : "were"} left out.`);
-    }
+    // A folder, or several files, becomes a queue. One file is the old path.
+    handMany(many, item.file).then((handled) => {
+      if (!handled) handFile(item.file, "");
+    }).catch(() => handFile(item.file, ""));
   }
 
   CTADrop.mount(document.getElementById("drop-overlay"), dropped);
@@ -113,6 +142,17 @@
     if (!view) return;
     if (view.section) show(view.section);
     if ("image" in view) CTAImages.set(view.image);
+    if ("images" in view) {
+      if (view.refused) {
+        CTAMessages.say("Firefox would not let the add-on read that page. "
+          + "Allow the site, from the home page or Settings, and try again.", true);
+      } else if (!view.images.length) {
+        CTAMessages.say("No images on that page.", true);
+      } else {
+        CTAImages.takeUrls(view.images);
+        CTAMessages.say(`${view.images.length} images from that page are queued.`);
+      }
+    }
     if ("video" in view) CTAVideos.set(view.video, view.page);
   }
 

@@ -14,6 +14,9 @@
   // The types worth raising the overlay for. Read from types, not getData,
   // which Firefox refuses to answer during a drag.
   const WANTED = ["Files", "text/html", "text/uri-list", "text/plain"];
+  // A folder dropped by mistake can hold thousands of files, and a queue that
+  // long is not something anyone meant to start.
+  const MAX_FILES = 500;
 
   function get(transfer, type) {
     try {
@@ -49,6 +52,52 @@
     if (!found) return null;
     const src = (found[1] || found[2] || found[3] || "").replace(/&amp;/g, "&");
     return usable(src.trim());
+  }
+
+  // A dropped folder arrives as an entry rather than a file, and has to be
+  // walked. Firefox gives this through webkitGetAsEntry, which is the name
+  // every browser settled on whatever it says about itself.
+  async function walk(entry, path, out, depth) {
+    if (!entry || depth > 8 || out.length >= MAX_FILES) return;
+    if (entry.isFile) {
+      const file = await new Promise((resolve) => entry.file(resolve, () => resolve(null)));
+      if (file) {
+        // The path inside the folder is kept, so a batch can say where a
+        // file came from rather than showing forty files called index.html.
+        out.push({ file, path: path ? `${path}/${file.name}` : file.name });
+      }
+      return;
+    }
+    if (!entry.isDirectory) return;
+    const reader = entry.createReader();
+    // readEntries hands back a page at a time and an empty page means the end.
+    for (;;) {
+      const batch = await new Promise((resolve) =>
+        reader.readEntries(resolve, () => resolve([])));
+      if (!batch.length) break;
+      for (const child of batch) {
+        await walk(child, path ? `${path}/${entry.name}` : entry.name, out, depth + 1);
+      }
+    }
+  }
+
+  // Everything a drop carried, folders walked. Used when a pane can take more
+  // than one file; read() is still the answer for a single one.
+  async function readAll(transfer) {
+    if (!transfer) return [];
+    const entries = Array.from(transfer.items || [])
+      .filter((item) => item.kind === "file")
+      .map((item) => (item.webkitGetAsEntry ? item.webkitGetAsEntry() : null))
+      .filter(Boolean);
+    const folders = entries.filter((entry) => entry.isDirectory);
+    if (folders.length) {
+      const out = [];
+      for (const entry of entries) await walk(entry, "", out, 0);
+      return out.slice(0, MAX_FILES);
+    }
+    return Array.from(transfer.files || [])
+      .slice(0, MAX_FILES)
+      .map((file) => ({ file, path: file.name }));
   }
 
   // null when there is nothing here to act on: text that is not an address, or
@@ -109,12 +158,15 @@
       e.preventDefault();
       depth = 0;
       paint();
+      // Read before anything is awaited: a DataTransfer is emptied as soon as
+      // the event handler returns, so the entries have to be taken now.
       const item = read(e.dataTransfer);
-      if (item) handler(item);
+      const many = readAll(e.dataTransfer);
+      if (item) handler(item, many);
     });
 
     paint();
   }
 
-  window.CTADrop = { read, mount };
+  window.CTADrop = { MAX_FILES, read, readAll, mount };
 })();

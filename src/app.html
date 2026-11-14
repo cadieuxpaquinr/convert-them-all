@@ -168,6 +168,12 @@
       background: var(--field-bg); border: 1px solid var(--field-border);
       border-radius: 6px; }
     #doc-outline .size { flex: 0 0 34px; }
+    #queue-list .state { flex: 0 0 64px; color: var(--muted); font-size: 11px; }
+    #queue-list .state[data-state="done"] { color: var(--ok); }
+    #queue-list .state[data-state="failed"] { color: var(--error); }
+    #queue-output { padding: 5px; font: inherit; color: inherit;
+      background: var(--field-bg); border: 1px solid var(--field-border);
+      border-radius: 6px; }
     #sheet-format { padding: 5px; font: inherit; color: inherit;
       background: var(--field-bg); border: 1px solid var(--field-border);
       border-radius: 6px; }
@@ -309,8 +315,27 @@
       <p id="image-selection" class="media-selection">Right-click an image on a page and
         choose &ldquo;Convert to&hellip;&rdquo;, or open one from your computer.</p>
       <div class="row">
-        <button id="pick-file">Choose an image&hellip;</button>
-        <input type="file" id="image-file" accept="image/*" hidden>
+        <button id="pick-file">Choose images&hellip;</button>
+        <input type="file" id="image-file" accept="image/*" multiple hidden>
+      </div>
+
+      <div id="image-queue" hidden>
+        <h2>The queue</h2>
+        <div id="queue-list" class="entries"></div>
+        <div class="row">
+          <label class="field"><span>Save as</span>
+            <select id="queue-output">
+              <option value="files">Separate files</option>
+              <option value="zip">One .zip</option>
+            </select></label>
+        </div>
+        <div class="row">
+          <button id="queue-run" class="primary">Convert all</button>
+          <button id="queue-cancel" hidden>Cancel</button>
+          <button id="queue-clear">Clear the queue</button>
+        </div>
+        <p class="hint">Every image in the queue is converted with the settings
+          above, one at a time. One that fails costs only itself.</p>
       </div>
 
       <div class="columns">
@@ -781,6 +806,7 @@
   <script src="formats/audioconvert.js"></script>
   <script src="platform/report.js"></script>
   <script src="platform/drop.js"></script>
+  <script src="platform/batch.js"></script>
   <script src="panes/images.js"></script>
   <script src="panes/videos.js"></script>
   <script src="platform/sitepath.js"></script>

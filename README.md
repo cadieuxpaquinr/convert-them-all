@@ -26,6 +26,12 @@ Right-click any image, or pick one from your computer.
 Firefox's canvas quietly returns PNG for a format it cannot write, so the add-on checks
 what it got back rather than save PNG bytes under a foreign extension.
 
+Several images at once, from the picker, from a drop, or from a dropped folder, become a
+queue: one at a time, with the settings on screen, saved as separate files or as one zip.
+An image that fails costs only itself. Right-clicking a page offers **Convert every image
+on this page**, which asks the page for its own addresses rather than reading its HTML, so
+an image put there by a script counts too.
+
 ### Videos
 
 Paste a link, detect the one on the page in front, or right-click a video. Downloading is
@@ -178,9 +184,7 @@ off it is.
   rather than only reading it.
 - **A saved website section as one EPUB**, which the Documents pane already writes for a
   single document.
-- **Batch, and whole pages**: convert many files in one go, drop a folder, and a
-  "Convert every image on this page" entry on the context menu. This is a change to how
-  the app works rather than another format, and it is the one that earns the name.
+- **Batch everywhere else**: Audio, Sheets and Documents still take one file at a time.
 
 **These need the helper and ffmpeg**
 

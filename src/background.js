@@ -1,5 +1,9 @@
 const COMMAND = "primary-action";
 const MENU_ITEM = "convert-image";
+const SWEEP_ITEM = "convert-page-images";
+// A page with more than this many images is a gallery or a tracker farm, and
+// queueing all of them is not what anyone meant.
+const SWEEP_LIMIT = 200;
 
 let appWindowId = null;
 let lastNormalWindowId = null;
@@ -15,11 +19,48 @@ browser.menus.create({
   contexts: ["image", "video"]
 });
 
+browser.menus.create({
+  id: SWEEP_ITEM,
+  title: "Convert every image on this page",
+  contexts: ["page"]
+});
+
+// Collected in the page rather than by parsing its HTML: an image put there
+// by a script is still an image, and the page already knows its own addresses.
+// This runs under the host permission the user grants; without it the
+// injection is refused and the entry says so.
+const COLLECT = `(() => {
+  const out = [];
+  for (const img of document.images) {
+    const src = img.currentSrc || img.src;
+    if (!src || !/^https?:/.test(src)) continue;
+    // A tracking pixel is not a picture anyone wants to convert.
+    if (img.naturalWidth && img.naturalWidth < 16) continue;
+    if (!out.includes(src)) out.push(src);
+  }
+  return out;
+})()`;
+
+async function sweep(info, tab) {
+  if (!tab || !/^https?:/.test(tab.url || "")) {
+    return showInApp({ section: "images", images: [] });
+  }
+  let found = [];
+  try {
+    const answer = await browser.tabs.executeScript(tab.id, { code: COLLECT });
+    found = (answer && answer[0]) || [];
+  } catch (e) {
+    return showInApp({ section: "images", images: [], refused: true });
+  }
+  return showInApp({ section: "images", images: found.slice(0, SWEEP_LIMIT) });
+}
+
 // The return value is ignored by Firefox; it is returned so a failure shows up as
 // a rejection in the console instead of disappearing.
 // Each kind of media goes to its own section. An unknown mediaType is treated as
 // an image, which is the only context the entry claimed before.
-browser.menus.onClicked.addListener((info) => {
+browser.menus.onClicked.addListener((info, tab) => {
+  if (info.menuItemId === SWEEP_ITEM) return sweep(info, tab);
   if (info.menuItemId !== MENU_ITEM) return undefined;
   const url = info.srcUrl || "";
   // The page address is what yt-dlp wants, and for a streamed video it is the

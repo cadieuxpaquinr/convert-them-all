@@ -26,6 +26,10 @@
   // The crop, in source pixels, or null for the whole picture.
   let crop = null;
   let dragging = null;
+  // More than one image at a time. The pane still shows one of them, which is
+  // the one the settings are judged against; the rest ride on those settings.
+  let queue = [];
+  let stop = false;
   // Cropping is a mode, and has to be: a pointer press on a picture is a
   // native image drag, which takes the pointer away mid-crop. Turning the mode
   // on is what stops the browser doing that.
@@ -189,11 +193,22 @@
     paintCrop();
   }
 
+  // Which side the user typed last. With the shape locked the other side is
+  // filled in for them, and that filled-in number belongs to the picture on
+  // screen alone: handing both to a queue would force every image into the
+  // shape of the first one.
+  let typed = "width";
+
   // The size asked for, or null when the fields are empty.
   function wantedSize() {
     const width = Number(el.width.value) || 0;
     const height = Number(el.height.value) || 0;
-    return width || height ? { width, height } : null;
+    if (!width && !height) return null;
+    if (el.lock.checked) {
+      return typed === "height" && height ? { height } : { width: width || 0,
+        height: width ? 0 : height };
+    }
+    return { width, height };
   }
 
   // With the shape locked, filling in one side fills in the other, so what the
@@ -368,6 +383,132 @@
     }
   }
 
+  function paintQueue() {
+    el.queue.hidden = queue.length < 2;
+    el.queueList.textContent = "";
+    for (const job of queue) {
+      const row = document.createElement("div");
+      const state = document.createElement("span");
+      state.className = "state";
+      state.dataset.state = job.state;
+      state.textContent = job.state;
+      const name = document.createElement("span");
+      name.className = "path";
+      name.textContent = job.name;
+      const note = document.createElement("span");
+      note.className = "size";
+      note.textContent = job.note || "";
+      row.append(state, name, note);
+      el.queueList.appendChild(row);
+    }
+  }
+
+  function clearQueue() {
+    queue = [];
+    paintQueue();
+  }
+
+  // Many files at once: the first is shown, and all of them are queued.
+  function take(files) {
+    const list = Array.from(files || []);
+    if (!list.length) return;
+    queue = list.map((file) => ({
+      file, name: file.name, state: CTABatch.WAITING, note: ""
+    }));
+    loadFile(list[0]);
+    paintQueue();
+  }
+
+  // The same, for images named by address rather than handed over as files.
+  function takeUrls(urls) {
+    const list = (urls || []).filter(Boolean);
+    if (!list.length) return;
+    queue = list.map((url) => ({
+      url, name: CTAConvert.nameFrom(url) || "image", state: CTABatch.WAITING,
+      note: ""
+    }));
+    set(list[0]);
+    paintQueue();
+  }
+
+  async function convertOne(job) {
+    const format = CTAConvert.format(el.format.value);
+    const url = job.url || URL.createObjectURL(job.file);
+    try {
+      const granted = await CTAAccess.request(url).catch(() => false);
+      if (!granted) throw new Error("permission refused");
+      const made = await CTAConvert.run({
+        url, name: job.file ? job.file.name : url, format: format.id,
+        crop, resize: wantedSize(), strip: el.strip.checked
+      });
+      const filename = CTAConvert.fileName(
+        CTAConvert.nameFrom(job.name), made.ext);
+      return { made, filename };
+    } finally {
+      if (!job.url) setTimeout(() => URL.revokeObjectURL(url), 60000);
+    }
+  }
+
+  // Every image in the queue, one at a time, with the settings on screen.
+  async function runQueue() {
+    const format = CTAConvert.format(el.format.value);
+    if (!CTAConvert.available(format)) {
+      setStatus(`${format ? format.label : "That format"} is not available yet.`, true);
+      return;
+    }
+    const zipping = el.output.value === "zip";
+    const packed = [];
+    stop = false;
+    el.cancel.hidden = false;
+    el.run.disabled = true;
+
+    const result = await CTABatch.run({
+      items: queue,
+      stopped: () => stop,
+      onStep: (line, jobs, job) => {
+        job.note = job.state === CTABatch.WORKING ? "…" : job.note;
+        queue[job.at].state = job.state;
+        el.state.textContent = line;
+        paintQueue();
+      },
+      worker: async (job) => {
+        const out = await convertOne(job);
+        if (zipping) {
+          packed.push({ name: out.filename,
+            bytes: new Uint8Array(await (await fetch(out.made.url)).arrayBuffer()) });
+        } else {
+          await browser.downloads.download({ url: out.made.url,
+            filename: out.filename, saveAs: false });
+        }
+        setTimeout(() => URL.revokeObjectURL(out.made.url), 60000);
+        return out.filename;
+      }
+    });
+
+    for (const job of result.jobs) {
+      queue[job.at].state = job.state;
+      queue[job.at].note = job.error || (job.result ? "saved" : "");
+    }
+    paintQueue();
+
+    if (zipping && packed.length) {
+      const blob = await CTAZip.write(packed);
+      const name = CTAConvert.fileName(el.name.value || "images", "zip");
+      const url = URL.createObjectURL(blob);
+      try {
+        await browser.downloads.download({ url, filename: name, saveAs: false });
+      } finally {
+        setTimeout(() => URL.revokeObjectURL(url), 60000);
+      }
+      setStatus(`${CTABatch.summary(result, "image")} Packed into ${name}.`);
+    } else {
+      setStatus(CTABatch.summary(result, "image"), !!result.counts.failed);
+    }
+    el.cancel.hidden = true;
+    el.run.disabled = false;
+    el.state.textContent = "Original";
+  }
+
   // The one way in. next is null, or { url, name, label, owned }.
   function load(next) {
     if (!el.selection) return;
@@ -440,6 +581,12 @@
     el.cropH = document.getElementById("crop-h");
     el.cropClear = document.getElementById("crop-clear");
     el.cropToggle = document.getElementById("crop-toggle");
+    el.queue = document.getElementById("image-queue");
+    el.queueList = document.getElementById("queue-list");
+    el.output = document.getElementById("queue-output");
+    el.run = document.getElementById("queue-run");
+    el.cancel = document.getElementById("queue-cancel");
+    el.clear = document.getElementById("queue-clear");
 
     placeholder = el.selection.textContent;
 
@@ -449,10 +596,10 @@
     el.pick.addEventListener("click", () => el.file.click());
 
     el.file.addEventListener("change", () => {
-      const file = el.file.files[0];
+      const files = Array.from(el.file.files);
       // Cleared so that picking the same file twice still fires a change.
       el.file.value = "";
-      if (file) loadFile(file);
+      if (files.length) take(files);
     });
 
     el.convert.addEventListener("click", convert);
@@ -491,9 +638,20 @@
     // nothing. Dragging it was what interrupted every crop.
     el.preview.draggable = false;
     el.box.addEventListener("dragstart", (e) => e.preventDefault());
-    el.width.addEventListener("input", () => { echoSize(el.width); showStripLabel(); });
-    el.height.addEventListener("input", () => { echoSize(el.height); showStripLabel(); });
+    el.width.addEventListener("input", () => {
+      typed = "width";
+      echoSize(el.width);
+      showStripLabel();
+    });
+    el.height.addEventListener("input", () => {
+      typed = "height";
+      echoSize(el.height);
+      showStripLabel();
+    });
     el.strip.addEventListener("change", showStripLabel);
+    el.run.addEventListener("click", () => runQueue().catch(() => {}));
+    el.cancel.addEventListener("click", () => { stop = true; });
+    el.clear.addEventListener("click", clearQueue);
     el.format.addEventListener("change", showStripLabel);
 
     el.forgetButton.addEventListener("click", async () => {
@@ -518,5 +676,5 @@
     load(url ? { url, name: url, label: short(url) } : null);
   }
 
-  window.CTAImages = { mount, set, file: loadFile };
+  window.CTAImages = { mount, set, file: loadFile, take, takeUrls };
 })();
