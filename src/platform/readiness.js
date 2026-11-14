@@ -35,20 +35,39 @@
   // whoever is willing.
   const YTDLP_DOCS = "https://github.com/yt-dlp/yt-dlp#installation";
   const FFMPEG_DOCS = "https://ffmpeg.org/download.html";
+  // Windows ships no ffmpeg and yt-dlp bundles none, and ffmpeg.org is a page
+  // of links to other people's builds. yt-dlp publishes its own, patched for
+  // the muxing faults it runs into, and that is what it tells people to use.
+  // Elsewhere the system's own ffmpeg is the right one.
+  const FFMPEG_BUILDS = "https://github.com/yt-dlp/FFmpeg-Builds/releases/latest";
   const RUNTIME_DOCS = "https://nodejs.org/en/download";
   const SETUP_DOCS =
     "https://github.com/cadieuxpaquinr/convert-them-all#install";
 
   const GET_YTDLP = { text: "Get yt-dlp", url: YTDLP_DOCS };
   const UPDATE_YTDLP = { text: "Update yt-dlp", url: YTDLP_DOCS };
-  const GET_FFMPEG = { text: "Get ffmpeg", url: FFMPEG_DOCS };
+  function ffmpegLink(os) {
+    return { text: "Get ffmpeg", url: os === "win" ? FFMPEG_BUILDS : FFMPEG_DOCS };
+  }
   const GET_RUNTIME = { text: "Get Node", url: RUNTIME_DOCS };
   const SETUP = { text: "How to set this up", url: SETUP_DOCS };
 
-  // Said wherever a program is missing: the PATH is what makes everything
-  // find it, and Settings is the way out when that is not wanted.
-  const WHERE = "Put it on your PATH, or say where it is in Settings, "
-    + "under Programs.";
+  // Said wherever a program is missing. The Downloads folder is searched
+  // already, so the first thing to try is simply downloading it.
+  const WHERE = "Download it and leave it in your Downloads folder, which is "
+    + "looked in. Putting it on your PATH works too, and Settings takes a "
+    + "path under Programs.";
+
+  // Where a program was found, when that is worth saying. A copy on the PATH
+  // is the ordinary case and needs no explaining.
+  const SOURCES = {
+    set: ", from the path you set",
+    downloads: ", found in your Downloads folder"
+  };
+
+  function from(tool) {
+    return SOURCES[tool.source] || "";
+  }
 
   // Only updating is left as a command. "yt-dlp -U" is one word, it works,
   // and a program that is already installed was installed somehow, which is
@@ -195,7 +214,7 @@
         "Without ffmpeg, some videos cannot be saved",
         "Sites such as YouTube send the picture and the sound separately, and ffmpeg "
         + `is what joins them. Videos that come as a single stream still work. ${WHERE}`,
-        [], GET_FFMPEG);
+        [], ffmpegLink(os));
     }
 
     const runtime = report.jsruntime || {};
@@ -286,28 +305,26 @@
         `${ytdlp.version}, ${days(age)} old. The release list could not be `
         + "fetched, so whether a newer one is out is unknown.", update, UPDATE_YTDLP);
     }
-    const where = ytdlp.configured ? ", from the path you set" : "";
+    const where = from(ytdlp);
     if (behind === null) {
       return row("ytdlp", "yt-dlp", "ok", `${ytdlp.version}${where}.`);
     }
     return row("ytdlp", "yt-dlp", "ok", `${ytdlp.version}, current${where}.`);
   }
 
-  function ffmpegRow(report) {
+  function ffmpegRow(report, os) {
     const ffmpeg = report.ffmpeg || {};
     if (ffmpeg.found) {
-      // Worth saying when it came from Settings rather than the PATH: that is
-      // the one the user has to keep up to date themselves.
-      return row("ffmpeg", "ffmpeg", "ok",
-        ffmpeg.configured ? `${ffmpeg.version}, from the path you set.`
-          : `${ffmpeg.version}.`);
+      // Worth saying when it did not come from the PATH: those are the copies
+      // the user has to keep up to date themselves.
+      return row("ffmpeg", "ffmpeg", "ok", `${ffmpeg.version}${from(ffmpeg)}.`);
     }
     // Missing ffmpeg costs some videos, not all of them, so the row warns
     // rather than refusing.
     return row("ffmpeg", "ffmpeg", "old",
       "Not found. Sites such as YouTube send the picture and the sound "
       + "separately, and ffmpeg is what joins them. Videos that come as one "
-      + `stream still work without it. ${WHERE}`, "", GET_FFMPEG);
+      + `stream still work without it. ${WHERE}`, "", ffmpegLink(os));
   }
 
   function tools(report, os) {
@@ -319,17 +336,18 @@
       return {
         rows: [
           row("ytdlp", "yt-dlp", "unknown", "Cannot tell yet.", "", GET_YTDLP),
-          row("ffmpeg", "ffmpeg", "unknown", "Cannot tell yet.", "", GET_FFMPEG)
+          row("ffmpeg", "ffmpeg", "unknown", "Cannot tell yet.", "",
+            ffmpegLink(os))
         ],
         helper: { text: why, link: SETUP }
       };
     }
-    return { rows: [ytdlpRow(report, os), ffmpegRow(report)], helper: null };
+    return { rows: [ytdlpRow(report, os), ffmpegRow(report, os)], helper: null };
   }
 
   window.CTAReady = {
     NEEDS_HOST, SUGGEST_BEHIND, FORCE_BEHIND, YTDLP_DOCS, FFMPEG_DOCS,
-    RUNTIME_DOCS, SETUP_DOCS,
-    commands, updateCommand, releasesBehind, check, tools
+    FFMPEG_BUILDS, RUNTIME_DOCS, SETUP_DOCS,
+    commands, updateCommand, releasesBehind, ffmpegLink, check, tools
   };
 })();

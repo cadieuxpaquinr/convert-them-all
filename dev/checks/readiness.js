@@ -53,29 +53,55 @@ is("ffmpeg ok", [t.rows[1].mark, t.rows[1].detail], ["ok", "8.0.1."]);
 is("nothing to run", [t.rows[0].command, t.rows[1].command], ["", ""]);
 is("and nothing to press", [t.rows[0].link, t.rows[1].link], [null, null]);
 
-// A program found at a path the user set says so.
+// Where a program came from, when it was not simply on the PATH.
 t = R.tools(base({
-  ytdlp: { found: true, version: "2026.10.26", install: "self", configured: true },
-  ffmpeg: { found: true, version: "8.0.1", configured: true }
+  ytdlp: { found: true, version: "2026.10.26", install: "self", source: "set" },
+  ffmpeg: { found: true, version: "8.0.1", source: "set" }
 }), "win");
-is("yt-dlp names where it came from", t.rows[0].detail,
+is("yt-dlp names the path that was set", t.rows[0].detail,
   "2026.10.26, current, from the path you set.");
 is("and so does ffmpeg", t.rows[1].detail, "8.0.1, from the path you set.");
+
+t = R.tools(base({
+  ytdlp: { found: true, version: "2026.10.26", install: "self", source: "downloads" },
+  ffmpeg: { found: true, version: "8.0.1", source: "downloads" }
+}), "win");
+is("a copy found in Downloads says so", t.rows[0].detail,
+  "2026.10.26, current, found in your Downloads folder.");
+is("ffmpeg too", t.rows[1].detail, "8.0.1, found in your Downloads folder.");
+
+t = R.tools(base({
+  ytdlp: { found: true, version: "2026.10.26", install: "self", source: "path" },
+  ffmpeg: { found: true, version: "8.0.1", source: "path" }
+}), "win");
+is("and one on the PATH says nothing about it", t.rows[0].detail,
+  "2026.10.26, current.");
 
 // Missing: a link, and a word about the PATH, and no command.
 t = R.tools(base({ ytdlp: { found: false } }), "win");
 is("missing is bad", t.rows[0].mark, "bad");
 is("with no command", t.rows[0].command, "");
 is("a link instead", t.rows[0].link, { text: "Get yt-dlp", url: R.YTDLP_DOCS });
-is("and it says where to put it", t.rows[0].detail.includes("PATH"), true);
-is("naming Settings as the other way",
-  t.rows[0].detail.includes("Settings"), true);
+is("and it says the Downloads folder is looked in",
+  t.rows[0].detail.includes("Downloads"), true);
+is("with the PATH as the other way", t.rows[0].detail.includes("PATH"), true);
+is("and Settings as the third", t.rows[0].detail.includes("Settings"), true);
 noInstallCommands("still no installer", t);
 
 t = R.tools(base({ ffmpeg: { found: false } }), "mac");
 is("ffmpeg missing warns", t.rows[1].mark, "old");
 is("with its own link", t.rows[1].link, { text: "Get ffmpeg", url: R.FFMPEG_DOCS });
 is("and no command", t.rows[1].command, "");
+
+// Windows has no ffmpeg of its own and yt-dlp bundles none, so it is sent to
+// the builds yt-dlp publishes rather than to a page of other people's.
+t = R.tools(base({ ffmpeg: { found: false } }), "win");
+is("windows is sent to yt-dlp's own builds",
+  t.rows[1].link.url, R.FFMPEG_BUILDS);
+is("and the others are not", R.ffmpegLink("mac").url, R.FFMPEG_DOCS);
+is("nor linux", R.ffmpegLink("linux").url, R.FFMPEG_DOCS);
+is("the videos pane agrees",
+  R.check(base({ ffmpeg: { found: false } }), "win").link.url, R.FFMPEG_BUILDS);
 
 // Behind: the one place a command survives, and the right one for how it
 // was installed.

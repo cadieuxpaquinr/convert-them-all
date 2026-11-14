@@ -146,8 +146,11 @@ and tells you what it found.
 
 1. **[yt-dlp](https://github.com/yt-dlp/yt-dlp#installation)**, which reads a video out
    of a web page.
-2. **[ffmpeg](https://ffmpeg.org/download.html)**, for sites that send the picture and
-   the sound separately. YouTube is one.
+2. **ffmpeg**, for sites that send the picture and the sound separately, which on
+   YouTube is anything above 360p. On Windows use
+   [yt-dlp's own builds](https://github.com/yt-dlp/FFmpeg-Builds/releases/latest), which
+   are patched for the muxing faults yt-dlp meets; elsewhere
+   [ffmpeg.org](https://ffmpeg.org/download.html) or your package manager.
 3. **The helper**, a small Python program that runs yt-dlp for the add-on, because an
    add-on cannot run a program itself. This is the one-time setup:
 
@@ -156,11 +159,11 @@ and tells you what it found.
 powershell -ExecutionPolicy Bypass -File host\install.ps1      # Windows
 ```
 
-**Where the first two live.** The helper looks on your PATH, which is the best place to
-put them. If you would rather not, Settings has a **Programs** block: give the full path
-to each file and the add-on hands it to the helper, and to yt-dlp through
-`--ffmpeg-location`. A yt-dlp.exe sitting in Downloads works that way without touching
-your PATH.
+**Where the first two live.** Three places are tried, in this order: a path you set in
+Settings under **Programs**, your PATH, and then your Downloads folder, three levels
+deep. That last one means a `yt-dlp.exe` you downloaded and left alone is simply found,
+and so is an ffmpeg build unzipped into its own folder. Whichever is used is handed to
+yt-dlp as well, through `--ffmpeg-location`, so the two of them cannot disagree.
 
 The home page lists what was found and what is missing, and says which of the two it
 used. A Firefox installed as a snap cannot reach programs outside its confinement, so

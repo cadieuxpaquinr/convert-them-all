@@ -105,6 +105,53 @@ def run(command):
     )
 
 
+# What these programs are called once they have been downloaded. yt-dlp ships
+# one file per platform under its own name, and the Windows ffmpeg builds
+# unpack into a folder with bin/ffmpeg.exe inside it.
+DOWNLOAD_NAMES = {
+    "yt-dlp": ("yt-dlp.exe", "yt-dlp_x86.exe", "yt-dlp_min.exe",
+               "yt-dlp_linux", "yt-dlp_macos", "yt-dlp"),
+    "ffmpeg": ("ffmpeg.exe", "ffmpeg"),
+}
+
+# How far into the Downloads folder to look, and how much of it to read. A
+# Downloads folder can hold years of rubbish, and this runs on every ping.
+SEARCH_DEPTH = 3
+SEARCH_LIMIT = 4000
+
+
+def runnable(place):
+    """A file that can actually be started, which on Unix means the bit is set."""
+    return place.is_file() and os.access(place, os.X_OK)
+
+
+def search_downloads(name):
+    """Look for a downloaded copy where it would be: the Downloads folder.
+
+    Someone who follows a download link ends up with yt-dlp.exe in Downloads
+    and nothing on their PATH. Finding it there is the difference between the
+    add-on working and the add-on telling them to go and edit their PATH.
+    """
+    root = downloads_folder()
+    if not root.is_dir():
+        return None
+    wanted = DOWNLOAD_NAMES.get(name, (name,))
+    seen = 0
+    # Shallowest first, so a loose yt-dlp.exe beats one inside an old folder.
+    for depth in range(SEARCH_DEPTH):
+        try:
+            level = list(root.glob("/".join(["*"] * depth + ["*"])))
+        except OSError:
+            return None
+        for place in level:
+            seen += 1
+            if seen > SEARCH_LIMIT:
+                return None
+            if place.name in wanted and runnable(place):
+                return str(place)
+    return None
+
+
 def given(paths, name):
     """A path the user set in Settings, when it is really there.
 
@@ -125,13 +172,26 @@ def given(paths, name):
 
 
 def locate(name, paths=None):
-    """Where a program is: what the user said first, then the PATH."""
-    return given(paths, name) or shutil.which(name)
+    """Where a program is, and how it was found.
+
+    What the user set wins, then the PATH, then a copy sitting in Downloads.
+    That last one is a guess, so it is reported as one.
+    """
+    wanted = given(paths, name)
+    if wanted:
+        return wanted, "set"
+    found = shutil.which(name)
+    if found:
+        return found, "path"
+    downloaded = search_downloads(name)
+    if downloaded:
+        return downloaded, "downloads"
+    return None, "missing"
 
 
 def tool(name, args, pick, paths=None):
     """Where a tool is and which version it is, or why it is not usable."""
-    path = locate(name, paths)
+    path, source = locate(name, paths)
     if not path:
         return {"found": False}
     try:
@@ -140,7 +200,7 @@ def tool(name, args, pick, paths=None):
         return {"found": True, "path": path, "broken": str(error)}
     text = result.stdout.strip() or result.stderr.strip()
     return {"found": True, "path": path, "version": pick(text),
-            "configured": bool(given(paths, name))}
+            "source": source, "configured": source == "set"}
 
 
 def first_word_after(text, marker):
@@ -402,7 +462,7 @@ def probe(message):
         return {"type": "error", "reason": "bad-url",
                 "detail": "Only http and https addresses can be read."}
 
-    ytdlp = locate("yt-dlp", message.get("tools"))
+    ytdlp, _ = locate("yt-dlp", message.get("tools"))
     if not ytdlp:
         return {"type": "error", "reason": "no-ytdlp",
                 "detail": "yt-dlp is not installed, or not on the PATH."}
@@ -463,7 +523,7 @@ def download(message):
         return {"type": "error", "reason": "bad-folder", "detail": problem}
 
     paths = message.get("tools")
-    ytdlp = locate("yt-dlp", paths)
+    ytdlp, _ = locate("yt-dlp", paths)
     if not ytdlp:
         return {"type": "error", "reason": "no-ytdlp",
                 "detail": "yt-dlp is not installed, or not on the PATH."}
@@ -491,10 +551,11 @@ def download(message):
         "--print", "after_move:" + FILE_MARK + "%(filepath)s",
     ]
 
-    # An ffmpeg the user pointed at is not on the PATH either, so yt-dlp
-    # cannot see it unless it is told. Without this, setting both paths would
-    # still fail to merge a video, which is the mystery this is meant to end.
-    ffmpeg = given(paths, "ffmpeg")
+    # yt-dlp does its own PATH search, so an ffmpeg that was set in Settings
+    # or found in Downloads is invisible to it unless it is told. Handing over
+    # the one this helper resolved also removes any chance of the two of them
+    # picking different copies.
+    ffmpeg, _ = locate("ffmpeg", paths)
     if ffmpeg:
         command += ["--ffmpeg-location", ffmpeg]
 
