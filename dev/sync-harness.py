@@ -13,13 +13,19 @@ the code rather than in the harness. One command, always both.
 Each <name>-drive.js becomes <name>-drive.html. A <name>.seed.html beside it, if
 there is one, is inserted after the stub, which is how a harness arranges what
 the page starts with.
+
+The add-on keeps its modules in src/panes, src/formats and src/platform; the
+harness is one flat folder, so the folder names are taken out of the script
+tags on the way through.
 """
 
 import pathlib
+import re
 import shutil
 import sys
 
 REPO = pathlib.Path(__file__).resolve().parent.parent
+SRC = REPO / "src"
 HARNESS = pathlib.Path.home() / "snap/firefox/common/cta-preview"
 STUB = '<script src="stub.js"></script>'
 
@@ -29,12 +35,14 @@ def main():
         print(f"No harness folder at {HARNESS}", file=sys.stderr)
         return 1
 
-    for source in list(REPO.glob("*.js")) + [REPO / "theme.css"]:
+    for source in list(SRC.rglob("*.js")) + [SRC / "theme.css"]:
         shutil.copy2(source, HARNESS / source.name)
 
-    page = (REPO / "app.html").read_text(encoding="utf-8")
+    page = (SRC / "app.html").read_text(encoding="utf-8")
     page = page.replace('<link rel="stylesheet" href="theme.css">',
                         f'<link rel="stylesheet" href="theme.css">\n  {STUB}', 1)
+    page = re.sub(r'<script src="(?:panes|formats|platform)/([a-z0-9-]+\.js)">',
+                  r'<script src="\1">', page)
 
     # Driverless, for the harnesses that load the app in a frame rather than
     # driving it in place. Both went stale and were missing two modules.

@@ -26,6 +26,12 @@ Right-click any image, or pick one from your computer.
 Firefox's canvas quietly returns PNG for a format it cannot write, so the add-on checks
 what it got back rather than save PNG bytes under a foreign extension.
 
+Several images at once, from the picker, from a drop, or from a dropped folder, become a
+queue: one at a time, with the settings on screen, saved as separate files or as one zip.
+An image that fails costs only itself. Right-clicking a page offers **Convert every image
+on this page**, which asks the page for its own addresses rather than reading its HTML, so
+an image put there by a script counts too.
+
 ### Videos
 
 Paste a link, detect the one on the page in front, or right-click a video. Downloading is
@@ -38,9 +44,10 @@ browser, because an add-on cannot run a program itself.
 - Skip sponsored segments, through [SponsorBlock](https://sponsor.ajay.app). YouTube only,
   and off by default.
 
-The pane checks what the machine can do and says exactly what to install. yt-dlp one
-release behind is a warning; two behind holds video downloads shut, because a copy that
-old fails on many sites in ways that look like a fault here.
+The pane checks what the machine can do and links to whatever is missing. It never asks
+you to run an installer: the only command it will ever show you is how to update a yt-dlp
+you already have. One release behind is a warning; two behind holds video downloads shut,
+because a copy that old fails on many sites in ways that look like a fault here.
 
 ### Audio
 
@@ -53,6 +60,41 @@ Pick an audio file, or drop one. Firefox decodes mp3, wav, flac, ogg, opus, m4a 
 
 A browser has no audio encoder but MediaRecorder, which writes Opus alone and in real
 time. WAV is written from the decoded samples instead, which is instant and exact.
+
+### Documents
+
+Markdown, HTML and **docx** between each other, and out to **EPUB**, **PDF** or plain
+text. Everything meets in the middle as the same blocks, so three ways in and six out is
+one reader and six writers rather than eighteen conversions.
+
+Headings, paragraphs, lists, code and table rows carry across; formatting beyond that
+does not. EPUB splits on first-level headings, one chapter each. Reading an EPUB back is
+not offered.
+
+### Sheets
+
+Open an **xlsx**, an **ods**, a **csv** or a **tsv** and save it as CSV (one file per
+sheet, or the first alone), TSV, or JSON keyed by the header row.
+
+What comes out is the data, not the formatting: a formula arrives as the answer it last
+gave, and a date as the day it names rather than as the number a spreadsheet stores.
+Writing a workbook back out is not offered, because one that a spreadsheet refused to
+open would be worse than not offering it.
+
+### Archives
+
+Open a zip, a tar or a tar.gz and it lists what is inside with a tick each, sizes and
+all. Nothing is written until you press **Extract ticked**: an archive can hold hundreds
+of files, and each one saved is a download of its own. Packer leavings such as
+`__MACOSX/` and `.DS_Store` start unticked.
+
+Packing works the same way in reverse: choose files, or tick what is already open, and
+write a **zip**, a **tar** or a **tar.gz**. That is also how one format becomes another.
+
+Firefox does the compression itself through `CompressionStream`, so there is nothing
+bundled. A name inside an archive comes from whoever made it, so every path is rebuilt
+from safe parts: an entry calling itself `../../etc/passwd` lands inside the folder with
+everything else.
 
 ### Websites
 
@@ -69,8 +111,9 @@ https://docs.nvidia.com/jetson/archives/r39.2/DeveloperGuide/SD/Kernel/RealTimeK
 ```
 
 Nothing outside that folder is followed, a page count stops the crawl, and the widest
-reach asks before it starts. Pages land under `Downloads/convert-them-all/<site>/`, and
-links between saved pages are rewritten so the copy can be read offline.
+reach asks before it starts. Pages land under `Downloads/convert-them-all/<site>/`, or
+in **one .zip** if you would rather, and links between saved pages are rewritten so the
+copy can be read offline either way.
 
 ### Files
 
@@ -83,8 +126,8 @@ yet: archives and spreadsheets are what this section is waiting for.
   keeps the last ten.
 - **A home page that sets the app up**: what is installed, what to install, and the
   optional all-sites permission, which can be given there and taken back in Settings.
-- **Settings** for the shortcut, the app window's size and position, the download folder
-  and the theme.
+- **Settings** for the shortcut, the app window's size and position, the download folder,
+  where yt-dlp and ffmpeg are if they are not on your PATH, and the theme.
 
 ## Install
 
@@ -96,17 +139,45 @@ The add-on is not published yet, so load it from source:
 
 Firefox removes a temporary add-on when it closes.
 
-**For video downloads only**, install the helper and its dependencies:
+### For video downloads only
+
+Three things, and the app never asks you to run any of them: it links to each and tells
+you what it found.
+
+1. **The plugin**, which runs yt-dlp for the add-on, because a Firefox add-on is not
+   allowed to run a program itself. Download it, unzip it, run one command:
+   **[SCRIPT_INSTALL.md](SCRIPT_INSTALL.md)**. It comes as a program, so nothing else is
+   needed, or as Python source if you would rather read what you run.
+2. **[yt-dlp](https://github.com/yt-dlp/yt-dlp#installation)**, which reads a video out
+   of a web page.
+3. **ffmpeg**, for sites that send the picture and the sound separately, which on
+   YouTube is anything above 360p. On Windows use
+   [yt-dlp's own builds](https://github.com/yt-dlp/FFmpeg-Builds/releases/latest), which
+   are patched for the muxing faults yt-dlp meets; elsewhere
+   [ffmpeg.org](https://ffmpeg.org/download.html) or your package manager.
+**Where yt-dlp and ffmpeg live.** Three places are tried, in this order: a path you set in
+Settings under **Programs**, your PATH, and then your Downloads folder. The last one
+opens everything directly in Downloads, and then follows only folders named after the
+program and `bin` folders inside them, five levels down. That is what it takes to find
+`ffmpeg-master-latest-win64-gpl/ffmpeg-master-latest-win64-gpl/bin/ffmpeg.exe`, which is
+where Windows puts an ffmpeg build after "Extract All". Whichever copy is used is handed
+to yt-dlp as well, through `--ffmpeg-location`, so the two of them cannot disagree.
+
+The home page lists what was found and what is missing, and says which of the three
+places it used. A Firefox installed as a snap cannot reach programs outside its
+confinement, so the plugin will not work there.
+
+**Building the plugin yourself** is one command, and the same one CI runs:
 
 ```sh
-./host/install.sh                                              # Linux and macOS
-powershell -ExecutionPolicy Bypass -File host\install.ps1      # Windows
+pyinstaller --onefile --name cta-helper host/cta_host.py
 ```
 
-The helper needs Python, yt-dlp, and ffmpeg for sites that send picture and sound
-separately. The app's home page names the exact command for your system. A Firefox
-installed as a snap cannot reach programs outside its confinement, so the helper will not
-work there.
+`.github/workflows/helper.yml` does that on Linux, Windows and macOS runners and
+attaches the three zips to a release, because PyInstaller cannot cross-compile. The
+Windows runner also builds `host/install.py` into `cta-install.exe`, so that setting
+this up on Windows is a double-click, and then installs it and reads the registry value
+back: the one part of this that cannot be checked anywhere but on Windows.
 
 ## Permissions
 
@@ -138,20 +209,11 @@ off it is.
 
 **The browser can already do these**
 
-- **Archives**: zip and tar.gz, made and read. Firefox does deflate and gzip itself
-  through `CompressionStream`, measured and exact, so only the container has to be
-  written.
-- **Zip a saved website** instead of a tree of folders, which is the same writer pointed
-  at the Websites pane.
-- **Sheets**: xlsx and ods to csv, and back. Both are a zip full of XML, so they ride on
-  the archive reader and the parser the Websites pane already uses.
-- **PDF out**: images to a PDF, and a saved page to a PDF.
-- **Documents**: Markdown, HTML and docx between each other, and a saved website section
-  as one EPUB. docx and EPUB are a zip full of XML as well.
-- **Batch, and whole pages**: convert many files in one go, drop a folder, and a
-  "Convert every image on this page" entry on the context menu. This is a change to how
-  the app works rather than another format, and it is the one that earns the name.
-- **Images, deeper**: resize, crop, strip EXIF, and SVG to PNG.
+- **Sheets, written back**: csv into a real xlsx or ods, which means building the XML
+  rather than only reading it.
+- **A saved website section as one EPUB**, which the Documents pane already writes for a
+  single document.
+- **Batch everywhere else**: Audio, Sheets and Documents still take one file at a time.
 
 **These need the helper and ffmpeg**
 
@@ -176,10 +238,22 @@ off it is.
 No build step, no bundler and no dependencies. Every file ships as written, one module per
 job, each exposing a single `CTA*` global.
 
+```
+manifest.json          the only file Firefox needs at the root
+src/app.html           the app window, and every script tag
+src/panes/             one file per section
+src/formats/           the converters and the containers they write
+src/platform/          permissions, the helper, messages, drops, settings
+host/                  the native helper for video downloads
+dev/                   tooling, never packaged
+```
+
 ```sh
-npx web-ext lint --source-dir .     # 0 errors expected
-./dev/firefox.sh                    # run it in a Firefox of its own
+./dev/check.sh                      # the node checks, for the pure modules
 ./dev/sync-harness.py               # rebuild the test pages after any change
+./dev/run-harness.sh                # run every test page headless
+./dev/firefox.sh                    # run it in a Firefox of its own
+npx web-ext lint --source-dir .     # 0 errors expected
 ```
 
 The pure modules are checked with node. The rest run in harness pages that load the real
