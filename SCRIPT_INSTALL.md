@@ -7,13 +7,29 @@ video means running one.
 
 So there is a small plugin that sits outside the browser. You install it once.
 
-Two ways to do it, on every system:
+Two ways to do it, on every system. Both end at the same place.
 
-- **A: the program.** Download, unzip, run one command. Nothing else needed.
-- **B: from the source.** The same thing as readable Python, if you would
-  rather see what you are running. Needs Python installed.
+## Which way?
 
-Pick one. Both end at the same place.
+### A: the simple way
+
+One download, one command, nothing else to install.
+
+**You cannot check what you are running.** It is a compiled program, so
+opening it tells you nothing: the readable code went in, machine code came
+out, and you have only our word that one matches the other. **If you do not
+trust us, which is fair and sensible, take route B instead.**
+
+### B: the Python way
+
+A few more steps, because you install Python first. That is not hard, and in
+exchange you can see exactly what you are running.
+
+Python is not compiled. The file you install is the same text you can open in
+any editor, and the computer runs that text directly. So anyone can check it:
+a friend who writes software, a search engine, or a chatbot, which will read
+the file and tell you in plain words what each part does. Nothing is hidden,
+because there is nowhere to hide it.
 
 Find your system: **[Linux](#linux)** · **[Windows](#windows)** ·
 **[macOS](#macos)**
@@ -22,7 +38,9 @@ Find your system: **[Linux](#linux)** · **[Windows](#windows)** ·
 
 ## Linux
 
-### A: the program
+### A: the simple way
+
+A compiled program: quick to install, impossible to read.
 
 **1. Download the plugin.**
 
@@ -44,7 +62,9 @@ sh ./install.sh
 
 **5. Go back to Convert Them All and press "installation complete, reload".**
 
-### B: from the source
+### B: the Python way
+
+A few more steps, and you can read every line of what you run.
 
 **1. Check that Python is installed.**
 
@@ -88,7 +108,9 @@ A path under `/snap/` means you have the snap.
 
 ## Windows
 
-### A: the program
+### A: the simple way
+
+A compiled program: quick to install, impossible to read.
 
 **1. Download the plugin.**
 
@@ -111,7 +133,9 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1
 
 **6. Go back to Convert Them All and press "installation complete, reload".**
 
-### B: from the source
+### B: the Python way
+
+A few more steps, and you can read every line of what you run.
 
 **1. Install Python.**
 
@@ -153,7 +177,9 @@ whole line.
 
 ## macOS
 
-### A: the program
+### A: the simple way
+
+A compiled program: quick to install, impossible to read.
 
 **1. Download the plugin.**
 
@@ -179,7 +205,9 @@ sh ./install.sh
 
 **6. Go back to Convert Them All and press "installation complete, reload".**
 
-### B: from the source
+### B: the Python way
+
+A few more steps, and you can read every line of what you run.
 
 **1. Check that Python is installed.**
 
