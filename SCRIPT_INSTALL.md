@@ -17,10 +17,11 @@ One download, one command, nothing else to install.
 
 **You cannot check what you are running.** It is a compiled program, so
 opening it tells you nothing: the readable code went in, machine code came
-out, and you have only our word that one matches the other. **If you do not
-trust us, which is fair and sensible, take route B instead.**
+out, and you have only our word that one matches the other. 
 
-### B: the Python way
+**If you do not trust us, which is fair, take route B instead.**
+
+### B: the Python way (recommended)
 
 A few more steps, because you install Python first. That is not hard, and in
 exchange you can see exactly what you are running.
@@ -40,8 +41,8 @@ Find your system: **[Linux](#linux)** · **[Windows](#windows)** ·
 
 ### A: the simple way
 
-A compiled program: quick to install, impossible to read.
-
+ **[Read first](#a-the-simple-way)**
+ 
 **1. Download the plugin.**
 
 <https://github.com/cadieuxpaquinr/convert-them-all/releases/latest/download/cta-helper-linux.zip>
@@ -64,7 +65,7 @@ sh ./install.sh
 
 ### B: the Python way
 
-A few more steps, and you can read every line of what you run.
+**[Read first](#b-the-python-way-recommended)**
 
 **1. Check that Python is installed.**
 
@@ -110,7 +111,7 @@ A path under `/snap/` means you have the snap.
 
 ### A: the simple way
 
-A compiled program: quick to install, impossible to read.
+ **[Read first](#a-the-simple-way)**
 
 **1. Download the plugin.**
 
@@ -135,7 +136,7 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1
 
 ### B: the Python way
 
-A few more steps, and you can read every line of what you run.
+**[Read first](#b-the-python-way-recommended)**
 
 **1. Install Python.**
 
@@ -179,7 +180,7 @@ whole line.
 
 ### A: the simple way
 
-A compiled program: quick to install, impossible to read.
+ **[Read first](#a-the-simple-way)**
 
 **1. Download the plugin.**
 
@@ -207,7 +208,7 @@ sh ./install.sh
 
 ### B: the Python way
 
-A few more steps, and you can read every line of what you run.
+**[Read first](#b-the-python-way-recommended)**
 
 **1. Check that Python is installed.**
 
